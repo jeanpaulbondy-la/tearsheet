@@ -12,13 +12,35 @@
       <h1>Tearsheet</h1>
       <p class="byline"><a href="https://jbondy.com" target="_blank" rel="noopener">Created by Jean-Paul Bondy 2026</a></p>
     </div>
-    <input id="search" type="text" placeholder="Search titles, tags, categories…" autocomplete="off" />
+    <div class="search-wrap">
+      <input id="search" type="text" placeholder="Search titles, tags, categories…" autocomplete="off" />
+      <span id="result-count" class="result-count"></span>
+    </div>
   </header>
+
+  <div class="filterbar">
+    <div id="category-filters" class="category-filters"></div>
+    <details id="tag-filter" class="tag-filter">
+      <summary>Tags</summary>
+      <div id="tag-filter-list" class="tag-filter-list"></div>
+    </details>
+  </div>
+
+  <div id="active-filters" class="active-filters" hidden>
+    <span id="active-filters-list" class="active-filters-list"></span>
+    <button id="clear-filters" type="button" class="clear-filters">Clear filters</button>
+  </div>
 
   <main id="grid" class="grid"></main>
 
   <p id="empty" class="empty" hidden>
     No images yet — drop some in <code>inbox/</code> and run <code>/process-inbox</code> in Claude Code.
+  </p>
+
+  <p id="no-results" class="empty" hidden>
+    No matches for the current search and filters.
+    <br />
+    <button id="clear-filters-2" type="button" class="btn-secondary">Clear filters</button>
   </p>
 
   <div id="selection-bar" class="selection-bar" hidden>
