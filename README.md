@@ -1,56 +1,47 @@
 # Tearsheet
 
-A personal, Pinterest-style reference gallery. Drop screenshots in, let Claude Code catalog them, browse them, and pull a selection into any future project as design reference — or scaffold a Figma starter kit (color variables, type styles, a few components) straight from what you selected.
+A personal, Pinterest-style reference gallery. Drop screenshots in, let Claude Code catalog them, browse them, and pull a selection into any future project as design reference — or scaffold a Figma starter kit straight from what you selected.
 
-## Setup
+## Install
 
 ```bash
-npm install
+git clone https://github.com/jeanpaulbondy-la/tearsheet.git
+```
+
+```bash
+cd tearsheet && npm install
+```
+
+```bash
 npm start
 ```
 
-Open http://localhost:4560. The gallery starts empty — `data/gallery.json` is created automatically on first run.
+Open **http://localhost:4560** — the gallery starts empty.
 
-### Install the Claude Code skills
-
-This repo ships three skills. One (`/process-inbox`) is project-scoped and works automatically once you `cd` into this folder in Claude Code. The other two need to be installed once, globally, since they're meant to work from *any* project:
+Then install the two global commands (one-time):
 
 ```bash
-cp -r skills/use-tearsheet ~/.claude/skills/
-cp -r skills/tearsheet-to-figma ~/.claude/skills/
+cp -r skills/use-tearsheet skills/tearsheet-to-figma ~/.claude/skills/
 ```
 
-Restart Claude Code afterward — it only loads the list of available skills at startup.
+Restart Claude Code so it picks up the new commands.
 
-## Adding images
+## Use
 
-1. Drop image files into `inbox/`.
-2. In Claude Code, inside this project, run:
-   ```
-   /process-inbox
-   ```
-   Claude will look at each image, rename it, tag it, extract its dominant colors, and file it into `images/` + `data/gallery.json`.
+**Add references:**
+1. Drop image files into the `inbox/` folder.
+2. In Claude Code, inside the `tearsheet` folder, run `/process-inbox` — it renames, tags, and catalogs each one automatically.
 
-## Using a selection as reference in a new project
+**Browse:** refresh `localhost:4560` to see them in the gallery.
 
-1. In the gallery site, click images to select them (border highlights, checkmark appears).
-2. Click **Save for Claude Code** in the floating bar — this writes `~/.claude/tearsheet-selection.json`.
-3. In Claude Code, in any other project, run:
-   ```
-   /use-tearsheet
-   ```
-   Claude will read the selection, view the images, and use them as style reference for what you're building.
+**Use a selection in another project:**
+1. Click images in the gallery to select them, then **Save for Claude Code**.
+2. In Claude Code, in *any* project, run `/use-tearsheet` — Claude pulls in the selected images as design reference.
 
-## Turning a selection into a Figma starter kit
+**Or turn a selection into a Figma starter kit:**
+- Same selection step, then run `/tearsheet-to-figma` instead — it builds color variables, type styles, and a few components in a new Figma file (requires Figma connected in Claude Code). See `skills/tearsheet-to-figma/SKILL.md` for the full behavior, including how to ask for the full (uncapped) design-system treatment instead of the starter-kit default.
 
-Requires the official Figma MCP server connected in your Claude Code environment.
-
-1. Select images in the gallery and save, same as above.
-2. In Claude Code, run:
-   ```
-   /tearsheet-to-figma
-   ```
-   Claude classifies the selection into UI sources vs. mood/palette sources, pools their extracted colors into a token set, approximates the typography, and builds a small set of token-bound components (capped at 5) in a new Figma file — with a References page tracing every token back to its source image. See `skills/tearsheet-to-figma/SKILL.md` for the full behavior, including how to ask for the full (uncapped) design-system treatment instead of the starter-kit default.
+That's the whole loop: drop in → `/process-inbox` → select in browser → `/use-tearsheet` or `/tearsheet-to-figma` in your next project.
 
 ## Structure
 
@@ -60,4 +51,4 @@ Requires the official Figma MCP server connected in your Claude Code environment
 - `public/` — the gallery website (static HTML/CSS/JS)
 - `server.js` — serves the site and handles saving selections
 - `.claude/skills/process-inbox/` — the `/process-inbox` command (project-scoped, auto-loaded)
-- `skills/use-tearsheet/`, `skills/tearsheet-to-figma/` — the two global commands; copy into `~/.claude/skills/` per the setup step above
+- `skills/use-tearsheet/`, `skills/tearsheet-to-figma/` — the two global commands; copy into `~/.claude/skills/` per the install step above
