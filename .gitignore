@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+
+# Personal library data — generated locally by /process-inbox, not shared
+data/gallery.json
+images/*
+!images/.gitkeep
+inbox/*
+!inbox/.gitkeep
