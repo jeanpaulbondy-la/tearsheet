@@ -20,4 +20,4 @@ Brings design references the user picked out in their Tearsheet gallery into the
 - `path` in the selection file is an absolute path — use it as-is regardless of the current project directory.
 - If an image path no longer exists (moved/renamed in the gallery since selection), mention it and skip it rather than failing.
 - This selection file is overwritten each time the user saves a new selection from the gallery — always re-read it fresh rather than assuming prior contents.
-- If the user wants to go further and scaffold an actual Figma file (color variables, typography, components) from this same selection, use the `tearsheet-to-figma` skill instead — it's heavier (needs Figma auth, many tool calls) so it's kept separate from this one.
+- If the user wants to go further and scaffold real design-tool output (color tokens, typography, components) from this same selection, use `tearsheet-to-figma` (for a Figma file) or `tearsheet-to-design` (for a claude.ai/design project) instead — both are heavier (need auth, many tool calls) so they're kept separate from this one.
