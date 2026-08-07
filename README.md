@@ -1,6 +1,6 @@
 # Tearsheet
 
-A personal, Pinterest-style reference gallery. Drop screenshots in, let Claude Code catalog them, browse them, and pull a selection into any future project as design reference — or scaffold a Figma or Claude Design starter kit straight from what you selected.
+A personal, Pinterest-style reference gallery. Drop in images or videos — screenshots, illustrations, renders, motion references, whatever — let Claude Code catalog them, browse them, and pull a selection into any future project as design reference — or scaffold a Figma or Claude Design starter kit straight from what you selected.
 
 ## Install
 
@@ -29,8 +29,8 @@ Restart Claude Code so it picks up the new commands.
 ## Use
 
 **Add references:**
-1. Drop image files into the `inbox/` folder.
-2. In Claude Code, inside the `tearsheet` folder, run `/process-inbox` — it renames, tags, and catalogs each one automatically.
+1. Drop image files (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`) or video files (`.mp4`, `.mov`, `.webm`, `.m4v`) into the `inbox/` folder.
+2. In Claude Code, inside the `tearsheet` folder, run `/process-inbox` — it renames, tags, and catalogs each one automatically. Videos get a representative frame extracted (via a bundled ffmpeg, no separate install needed) for the palette and gallery thumbnail; cards preview the video on hover.
 
 **Browse:** refresh `localhost:4560` to see them in the gallery.
 
@@ -45,7 +45,7 @@ That's the whole loop: drop in → `/process-inbox` → select in browser → `/
 
 ## Structure
 
-- `inbox/` — drop zone for new, unprocessed images
+- `inbox/` — drop zone for new, unprocessed images and videos
 - `images/` — processed, renamed images
 - `data/gallery.json` — metadata for every gallery item (git-ignored — this is your personal library, not shared)
 - `public/` — the gallery website (static HTML/CSS/JS)

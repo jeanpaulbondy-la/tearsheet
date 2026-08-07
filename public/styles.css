@@ -310,6 +310,22 @@ body {
   background: var(--border);
 }
 
+.card-video-badge {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  width: 22px;
+  height: 22px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 2px;
+  pointer-events: none;
+}
+
 .card-body {
   padding: 1rem 1.1rem 1.1rem;
 }

@@ -35,10 +35,16 @@ function renderCard(item, index, total) {
   const visibleTags = tags.slice(0, 3);
   const overflow = tags.length - visibleTags.length;
   const palette = item.palette || [];
+  const isVideo = item.mediaType === "video";
+
+  const mediaHtml = isVideo
+    ? `<video class="card-image" src="/images/${encodeURIComponent(item.filename)}" poster="/images/${encodeURIComponent(item.thumbnail || "")}" muted loop playsinline preload="metadata"></video>
+       <span class="card-video-badge">▶</span>`
+    : `<img class="card-image" src="/images/${encodeURIComponent(item.filename)}" alt="${item.title || ""}" loading="lazy" />`;
 
   card.innerHTML = `
     <div class="card-check">${checkIcon()}</div>
-    <img class="card-image" src="/images/${encodeURIComponent(item.filename)}" alt="${item.title || ""}" loading="lazy" />
+    ${mediaHtml}
     <div class="card-body">
       <div class="card-title-row">
         <h2 class="card-title">${item.title || "Untitled"}</h2>
@@ -60,6 +66,15 @@ function renderCard(item, index, total) {
   `;
 
   card.addEventListener("click", () => toggleSelect(item.id, card));
+
+  if (isVideo) {
+    const videoEl = card.querySelector("video.card-image");
+    card.addEventListener("mouseenter", () => videoEl.play().catch(() => {}));
+    card.addEventListener("mouseleave", () => {
+      videoEl.pause();
+      videoEl.currentTime = 0;
+    });
+  }
 
   card.querySelectorAll(".tag[data-tag]").forEach((el) => {
     el.addEventListener("click", (e) => {
