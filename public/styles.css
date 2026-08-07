@@ -254,11 +254,18 @@ body {
   position: relative;
   break-inside: avoid;
   margin-bottom: 1.75rem;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.15s ease, transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
 .card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
+  border-color: var(--ink-soft);
+  z-index: 2;
+}
+
+.grid:hover .card:not(:hover) {
+  opacity: 0.55;
 }
 
 .card.selected {
