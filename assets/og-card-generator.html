@@ -1,0 +1,344 @@
+<meta charset="UTF-8" />
+<title>Tearsheet: social preview card</title>
+<style>
+  :root {
+    --page-bg: #f3f1ec;
+    --page-ink: #1c1f22;
+    --page-ink-soft: #6b6f74;
+    --page-border: #d9d6cd;
+    --page-accent: #5b6f89;
+    --card-surface: #fff;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page-bg: #14171a;
+      --page-ink: #e5e7ea;
+      --page-ink-soft: #8b929b;
+      --page-border: #2d3238;
+      --card-surface: #1c2024;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --page-bg: #14171a;
+    --page-ink: #e5e7ea;
+    --page-ink-soft: #8b929b;
+    --page-border: #2d3238;
+    --card-surface: #1c2024;
+  }
+
+  :root[data-theme="light"] {
+    --page-bg: #f3f1ec;
+    --page-ink: #1c1f22;
+    --page-ink-soft: #6b6f74;
+    --page-border: #d9d6cd;
+    --card-surface: #fff;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--page-ink);
+    font-family: Georgia, "Iowan Old Style", serif;
+    padding: 3rem 1.5rem 4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.75rem;
+  }
+
+  h1 {
+    font-size: 1.3rem;
+    font-weight: 400;
+    font-style: italic;
+    margin: 0;
+    text-align: center;
+  }
+
+  .sub {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--page-ink-soft);
+    text-align: center;
+    max-width: 480px;
+    line-height: 1.6;
+    margin: -1rem 0 0;
+  }
+
+  .canvas-frame {
+    width: 100%;
+    max-width: 1000px;
+    overflow-x: auto;
+    border: 1px solid var(--page-border);
+    background: var(--card-surface);
+    padding: 1.25rem;
+  }
+
+  canvas#card {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1280 / 640;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 0.78rem;
+    padding: 0.65rem 1.2rem;
+    background: var(--page-ink);
+    color: var(--page-bg);
+    border: none;
+    cursor: pointer;
+  }
+
+  button:hover { background: var(--page-accent); }
+
+  button:focus-visible {
+    outline: 2px solid var(--page-accent);
+    outline-offset: 2px;
+  }
+
+  .meta {
+    color: var(--page-ink-soft);
+  }
+</style>
+
+<h1>Social preview card, for GitHub / Reddit / Threads link previews</h1>
+<p class="sub">Rendered on a canvas at 2560×1280 (2x) and exported as a 1280×640 PNG, GitHub's recommended social-preview size. The swatch strip uses the actual primitive hexes pulled during this session's Claude Design run, not placeholder colors.</p>
+
+<div class="canvas-frame">
+  <canvas id="card" width="2560" height="1280"></canvas>
+</div>
+
+<div class="actions">
+  <button id="download" type="button">Download PNG</button>
+  <span class="meta" id="dims">2560 × 1280px</span>
+</div>
+
+<script>
+(function () {
+  const canvas = document.getElementById("card");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  const S = W / 1280; // scale factor from design coords (1280x640) to canvas px
+
+  // deterministic PRNG so the torn edge is stable across re-renders
+  function mulberry32(seed) {
+    return function () {
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const rng = mulberry32(1337);
+
+  function px(v) { return v * S; }
+
+  // ---- palette ----
+  const inkDeep = "#0d0f12";
+  const inkVignette = "#1a1d21";
+  const paper = "#e9ebec";
+  const paperShade = "#d7dadc";
+  const textInk = "#181b1e";
+  const textSoft = "#5c636b";
+  const accent = "#5b6f89";
+  const tape = "rgba(201, 168, 118, 0.55)";
+
+  const swatches = [
+    { name: "ink",   hex: "#0a0908" },
+    { name: "cream", hex: "#f7f2e7" },
+    { name: "coral", hex: "#ee6548" },
+    { name: "sky",   hex: "#61c4da" },
+    { name: "navy",  hex: "#19354c" },
+    { name: "sage",  hex: "#6ea18b" },
+    { name: "gold",  hex: "#c3974a" }
+  ];
+
+  // ---- background: dark studio desk, soft vignette + grain ----
+  ctx.fillStyle = inkDeep;
+  ctx.fillRect(0, 0, W, H);
+
+  const vg = ctx.createRadialGradient(W * 0.5, H * 0.42, H * 0.1, W * 0.5, H * 0.5, W * 0.65);
+  vg.addColorStop(0, inkVignette);
+  vg.addColorStop(1, inkDeep);
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.globalAlpha = 0.05;
+  for (let i = 0; i < 3600; i++) {
+    const gx = rng() * W, gy = rng() * H;
+    ctx.fillStyle = rng() > 0.5 ? "#ffffff" : "#000000";
+    ctx.fillRect(gx, gy, 1, 1);
+  }
+  ctx.restore();
+
+  // ---- torn paper card ----
+  const cardCx = px(640), cardCy = px(330);
+  const cardW = px(860), cardH = px(430);
+  const rot = -1.6 * (Math.PI / 180);
+  const jag = px(5); // tear amplitude
+  const step = px(14); // tear frequency
+
+  function tornRectPoints(w, h, amp, stp) {
+    const pts = [];
+    const half = { x: w / 2, y: h / 2 };
+    // top edge, left->right
+    for (let x = -half.x; x <= half.x; x += stp) pts.push([x, -half.y + (rng() - 0.5) * amp]);
+    // right edge, top->bottom
+    for (let y = -half.y; y <= half.y; y += stp) pts.push([half.x + (rng() - 0.5) * amp, y]);
+    // bottom edge, right->left
+    for (let x = half.x; x >= -half.x; x -= stp) pts.push([x, half.y + (rng() - 0.5) * amp]);
+    // left edge, bottom->top
+    for (let y = half.y; y >= -half.y; y -= stp) pts.push([-half.x + (rng() - 0.5) * amp, y]);
+    return pts;
+  }
+
+  const tornPts = tornRectPoints(cardW, cardH, jag, step);
+
+  function drawTornPath() {
+    ctx.beginPath();
+    tornPts.forEach(([x, y], i) => {
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+  }
+
+  // drop shadow
+  ctx.save();
+  ctx.translate(cardCx, cardCy);
+  ctx.rotate(rot);
+  ctx.shadowColor = "rgba(0,0,0,0.55)";
+  ctx.shadowBlur = px(28);
+  ctx.shadowOffsetX = px(10);
+  ctx.shadowOffsetY = px(18);
+  ctx.fillStyle = paper;
+  drawTornPath();
+  ctx.fill();
+  ctx.restore();
+
+  // paper fill + subtle shading (no shadow this pass)
+  ctx.save();
+  ctx.translate(cardCx, cardCy);
+  ctx.rotate(rot);
+  drawTornPath();
+  ctx.clip();
+
+  ctx.fillStyle = paper;
+  ctx.fillRect(-cardW, -cardH, cardW * 2, cardH * 2);
+
+  const sheen = ctx.createLinearGradient(-cardW / 2, -cardH / 2, cardW / 2, cardH / 2);
+  sheen.addColorStop(0, "rgba(255,255,255,0.35)");
+  sheen.addColorStop(0.4, "rgba(255,255,255,0)");
+  sheen.addColorStop(1, "rgba(0,0,0,0.05)");
+  ctx.fillStyle = sheen;
+  ctx.fillRect(-cardW, -cardH, cardW * 2, cardH * 2);
+
+  // fold shadow line
+  ctx.strokeStyle = paperShade;
+  ctx.lineWidth = px(1);
+  ctx.globalAlpha = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(-cardW / 2, cardH * 0.14);
+  ctx.lineTo(cardW / 2, cardH * 0.14);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // ---- content (drawn inside the clipped, rotated paper space) ----
+  const left = -cardW / 2 + px(56);
+  const top = -cardH / 2 + px(54);
+  const contentW = cardW - px(112);
+
+  // eyebrow
+  ctx.fillStyle = textSoft;
+  ctx.font = `${px(15)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
+  ctx.textBaseline = "alphabetic";
+  ctx.save();
+  ctx.font = `700 ${px(13)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
+  ctx.fillText("D E S I G N   R E F E R E N C E   G A L L E R Y", left, top);
+  ctx.restore();
+
+  // wordmark
+  ctx.fillStyle = textInk;
+  ctx.font = `700 ${px(92)}px Georgia, "Iowan Old Style", serif`;
+  ctx.fillText("Tearsheet", left - px(4), top + px(112));
+
+  // tagline
+  ctx.fillStyle = "#33383d";
+  ctx.font = `italic ${px(25)}px Georgia, "Iowan Old Style", serif`;
+  ctx.fillText("Catalogs the color, mood, and UI patterns in every reference.", left, top + px(164));
+  ctx.fillStyle = accent;
+  ctx.font = `italic ${px(25)}px Georgia, "Iowan Old Style", serif`;
+  ctx.fillText("Scaffolds it straight into Figma or Claude Design.", left, top + px(200));
+
+  // swatch strip (color-proof bar), bleeding toward the torn bottom edge
+  const stripY = cardH / 2 - px(88);
+  const gap = px(14);
+  const chip = (contentW - gap * (swatches.length - 1)) / swatches.length;
+  const chipH = px(64);
+
+  swatches.forEach((sw, i) => {
+    const x = left + i * (chip + gap);
+    ctx.fillStyle = sw.hex;
+    ctx.fillRect(x, stripY, chip, chipH);
+    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    ctx.lineWidth = px(1);
+    ctx.strokeRect(x + 0.5, stripY + 0.5, chip, chipH);
+
+    ctx.fillStyle = textSoft;
+    ctx.font = `${px(12)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
+    ctx.fillText(sw.hex, x, stripY + chipH + px(22));
+  });
+
+  ctx.restore(); // end clip
+
+  // kraft tape pinning the top of the sheet
+  ctx.save();
+  ctx.translate(cardCx - cardW * 0.28, cardCy - cardH / 2);
+  ctx.rotate(rot + (-6 * Math.PI) / 180);
+  ctx.fillStyle = tape;
+  ctx.fillRect(-px(70), -px(18), px(140), px(36));
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(cardCx + cardW * 0.22, cardCy - cardH / 2);
+  ctx.rotate(rot + (4 * Math.PI) / 180);
+  ctx.fillStyle = tape;
+  ctx.fillRect(-px(60), -px(16), px(120), px(32));
+  ctx.restore();
+
+  // corner credit, outside the paper
+  ctx.fillStyle = "rgba(229,231,234,0.55)";
+  ctx.font = `${px(15)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
+  ctx.textAlign = "right";
+  ctx.fillText("github.com/jeanpaulbondy-la/tearsheet", W - px(48), H - px(40));
+  ctx.textAlign = "left";
+
+  // credit, aligned to the same right edge
+  ctx.fillStyle = textSoft;
+  ctx.font = `${px(15)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
+  ctx.textAlign = "right";
+  ctx.fillText("github.com/jeanpaulbondy-la/tearsheet", rightEdge, px(600));
+  ctx.textAlign = "left";
+
+  // ---- download ----
+  document.getElementById("download").addEventListener("click", function () {
+    const link = document.createElement("a");
+    link.download = "tearsheet-og-card.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  });
+})();
+</script>
