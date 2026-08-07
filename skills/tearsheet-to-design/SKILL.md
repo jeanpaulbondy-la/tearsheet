@@ -33,9 +33,31 @@ If **zero** images classify as UI sources: say so plainly, and only do Step 4a (
 
 ## Step 4 — Derive design intent
 
-**4a. Color** — Pool the `palette` array from every selected image (UI and mood sources both count). Dedupe near-duplicate hexes down to a reasonable primitive set. Propose a light-mode semantic layer of CSS custom properties aliased to those primitives: `--color-bg-primary`, `--color-bg-surface`, `--color-text-primary`, `--color-text-secondary`, `--color-accent-primary`, `--color-border-default` (adapt names to what the palette actually supports — don't invent roles with no plausible source color). Add `--color-accent-secondary` only if the palette clearly supports two distinct accent hues.
+**4a. Color** — Pool the `palette` array from every selected image (UI and mood sources both count). Dedupe near-duplicate hexes down to a reasonable primitive set (typically 4–8 base colors).
+
+**Expand each primitive into a tint/shade ramp.** Write the script below to a file in your scratchpad directory (e.g. `tint-ramp.js`) and run it once with every deduped primitive hex as arguments — don't compute tints by hand, this is exact deterministic math:
+
+```js
+// tint-ramp.js — usage: node tint-ramp.js <hex1> [hex2 ...]
+// Prints [{ base, tints: {50..900} }]. 500 = input color. <500 mixes toward white, >500 toward black.
+const WHITE = { r: 255, g: 255, b: 255 };
+const BLACK = { r: 0, g: 0, b: 0 };
+const STOPS = { 50: 0.95, 100: 0.9, 200: 0.75, 300: 0.6, 400: 0.35, 500: 0, 600: 0.15, 700: 0.3, 800: 0.45, 900: 0.6 };
+function hexToRgb(hex) { const h = hex.replace("#",""); const full = h.length===3 ? h.split("").map(c=>c+c).join("") : h; const n = parseInt(full,16); return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 }; }
+function rgbToHex({r,g,b}) { return "#" + [r,g,b].map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,"0")).join(""); }
+function mix(a,b,t) { return { r:a.r+(b.r-a.r)*t, g:a.g+(b.g-a.g)*t, b:a.b+(b.b-a.b)*t }; }
+function tintRamp(hex) { const base = hexToRgb(hex); const ramp = {}; for (const [step,t] of Object.entries(STOPS)) { const s = Number(step); ramp[step] = s<500 ? rgbToHex(mix(base,WHITE,t)) : s===500 ? rgbToHex(base) : rgbToHex(mix(base,BLACK,t)); } return ramp; }
+const hexes = process.argv.slice(2);
+console.log(JSON.stringify(hexes.map(hex => ({ base: hex, tints: tintRamp(hex) })), null, 2));
+```
+
+Run it, then declare each step of each ramp as a CSS custom property named `--primitive-<short-descriptive-color-name>-<step>` (e.g. `--primitive-rust-500`, `--primitive-rust-100`) — pick the descriptive name yourself from what you see (a hue/mood word, not "color1"). The 500 step is always the original extracted hex.
+
+Propose a light-mode semantic layer aliased to specific ramp steps (not just the flat 500): `--color-bg-primary`, `--color-bg-surface`, `--color-text-primary`, `--color-text-secondary`, `--color-accent-primary` (alias to a ramp's 500), `--color-accent-primary-hover` (alias to that same ramp's 600), `--color-border-default` (adapt names to what the palette actually supports — don't invent roles with no plausible source color). Add `--color-accent-secondary` only if the palette clearly supports two distinct accent hues. Lean on lighter steps (50/100) for subtle backgrounds and darker steps (700/800) for hover/pressed states instead of inventing new primitives for those roles.
 
 Always include **`--color-text-on-accent`** (typically white or near-white, aliased to a dedicated primitive) whenever any accent token exists — components in 4c almost always need text/icon color sitting on top of an accent fill (buttons, badges), and skipping this token up front means adding it mid-build in Step 5 instead. Same logic applies to any other fill that will host text or icons directly: if 4c's component list includes something with reversed/inverted colors, add its "on-X" token here, not later.
+
+**Tint ramps are internal build material only** — they exist to give the semantic layer and component previews more to alias against. Never surface them (or any color/typography output from this skill) back on a Tearsheet gallery card; the card always shows just the 6 raw extracted colors, unrelated to this project.
 
 **4b. Typography** — From any image with legible type (UI sources, plus type-specimen-style mood images), describe what you see (serif/sans/mono, weight, tracking, mood). Since there's no live font library to query here, pick the closest **web-safe or system font stack** per role — up to three roles: Heading, Body, Mono (e.g. `Heading: "Georgia", "Iowan Old Style", serif`). Name the resulting styles to flag the approximation, e.g. "Heading — approx. Georgia." Never imply an exact font match, and never assume a non-system font is available without a way to load it.
 
@@ -55,6 +77,8 @@ Build the bundle locally first (in the scratchpad directory), then push it with 
    `<!-- @dsCard group="Foundations" name="Colors" -->` (adjust `group`/`name`/`subtitle` per file — groups: `Foundations`, `References`, `Components`).
 
    Make each file fully self-contained (inline `<style>` with the token values as CSS custom properties in `:root`, no external requests) — previews render in isolation, so nothing may depend on another file loading first.
+
+   **Every preview file's `<body>` must use the file's own tokens, no exceptions** — set `background: var(--color-bg-primary)` (or `--color-bg-surface` for one that should read as a raised panel) and `color`/`font-family` from the 4b body role, in the inlined `:root` block. Never leave any preview on the browser's default white background and default serif — that includes `foundations/colors.html` and `foundations/typography.html` themselves, not just the component previews. Any heading text within a preview uses the matching heading role's font from 4b, not a bare `<h1>` default.
 
 2. **Plan and confirm.** Call `list_files` on the target project to see what's already there. Show the user the concrete list of paths you're about to write (and any you'd delete, if overwriting a prior run) before proceeding.
 3. **Finalize and write.** Call `finalize_plan` with those paths and `localDir` set to the local build directory, then `write_files` with `localPath` for each file. Split into multiple `write_files` calls if needed (max 256 files per call — irrelevant at starter-kit scale, but keep in mind if the user asks for the full treatment).
