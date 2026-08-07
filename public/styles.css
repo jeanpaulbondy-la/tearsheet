@@ -53,24 +53,6 @@ body {
   margin: 0;
 }
 
-.byline {
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  font-weight: 300;
-  opacity: 0.5;
-  margin: 0;
-  white-space: nowrap;
-}
-
-.byline a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.byline a:hover {
-  text-decoration: underline;
-}
-
 .search-wrap {
   display: flex;
   align-items: center;
