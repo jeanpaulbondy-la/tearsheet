@@ -1,6 +1,6 @@
 # Tearsheet
 
-A personal, Pinterest-style reference gallery. Drop in images or videos and Claude Code catalogs them, extracting a real color palette from each one, so you can browse, pull a selection into any project as plain design reference, or scaffold it straight into a new Figma file or Claude Design project.
+A personal, visual reference gallery. Drop in images or videos and Claude Code catalogs them, extracting a real color palette from each one, so you can browse, pull a selection into any project as plain design reference, or scaffold it straight into a new Figma file or Claude Design project.
 
 ## Install
 

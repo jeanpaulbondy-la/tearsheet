@@ -1,6 +1,6 @@
 ---
 name: use-tearsheet
-description: Load the images the user selected in their Tearsheet gallery (a local Pinterest-style reference site) and use them as design reference for the current project. Use when the user says things like "use my tearsheet selection", "pull in my saved references", or "/use-tearsheet".
+description: Load the images the user selected in their Tearsheet gallery (a local visual reference site) and use them as design reference for the current project. Use when the user says things like "use my tearsheet selection", "pull in my saved references", or "/use-tearsheet".
 ---
 
 # Use Tearsheet
