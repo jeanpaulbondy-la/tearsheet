@@ -16,7 +16,7 @@ const saveBtn = document.getElementById("save-selection");
 
 let items = [];
 let selected = new Set();
-let activeCategory = null;
+let activeCategories = new Set();
 let activeTags = new Set();
 
 function checkIcon() {
@@ -71,7 +71,7 @@ function renderCard(item, index, total) {
   const categoryEl = card.querySelector(".card-category[data-category]");
   categoryEl.addEventListener("click", (e) => {
     e.stopPropagation();
-    setCategoryFilter(categoryEl.dataset.category);
+    toggleCategoryFilter(categoryEl.dataset.category);
   });
 
   return card;
@@ -103,8 +103,8 @@ function matchesSearch(item, query) {
 }
 
 function matchesCategory(item) {
-  if (!activeCategory) return true;
-  return (item.category || "Uncategorized") === activeCategory;
+  if (activeCategories.size === 0) return true;
+  return activeCategories.has(item.category || "Uncategorized");
 }
 
 function matchesTags(item) {
@@ -135,13 +135,13 @@ function renderCategoryFilters() {
   categoryFiltersEl.innerHTML = counts
     .map(
       ([cat, count]) => `
-    <button type="button" class="pill${activeCategory === cat ? " active" : ""}" data-category="${cat}">
+    <button type="button" class="pill${activeCategories.has(cat) ? " active" : ""}" data-category="${cat}">
       ${cat} <span class="pill-count">${count}</span>
     </button>`
     )
     .join("");
   categoryFiltersEl.querySelectorAll(".pill").forEach((btn) => {
-    btn.addEventListener("click", () => setCategoryFilter(btn.dataset.category));
+    btn.addEventListener("click", () => toggleCategoryFilter(btn.dataset.category));
   });
 }
 
@@ -164,7 +164,7 @@ function renderTagFilterList() {
 
 function renderActiveFilters() {
   const chips = [];
-  if (activeCategory) chips.push({ type: "category", label: activeCategory });
+  activeCategories.forEach((cat) => chips.push({ type: "category", label: cat }));
   activeTags.forEach((tag) => chips.push({ type: "tag", label: tag }));
 
   activeFiltersEl.hidden = chips.length === 0;
@@ -173,14 +173,15 @@ function renderActiveFilters() {
     .join("");
   activeFiltersListEl.querySelectorAll(".chip").forEach((chip) => {
     chip.addEventListener("click", () => {
-      if (chip.dataset.type === "category") setCategoryFilter(chip.dataset.label);
+      if (chip.dataset.type === "category") toggleCategoryFilter(chip.dataset.label);
       else toggleTagFilter(chip.dataset.label);
     });
   });
 }
 
-function setCategoryFilter(cat) {
-  activeCategory = activeCategory === cat ? null : cat;
+function toggleCategoryFilter(cat) {
+  if (activeCategories.has(cat)) activeCategories.delete(cat);
+  else activeCategories.add(cat);
   renderCategoryFilters();
   renderActiveFilters();
   render();
@@ -195,7 +196,7 @@ function toggleTagFilter(tag) {
 }
 
 function clearFilters() {
-  activeCategory = null;
+  activeCategories.clear();
   activeTags.clear();
   renderCategoryFilters();
   renderTagFilterList();
