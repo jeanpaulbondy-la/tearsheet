@@ -76,6 +76,11 @@ function renderCard(item, index, total) {
       videoEl.pause();
       videoEl.currentTime = 0;
     });
+    videoEl.addEventListener("loadedmetadata", scheduleLayout);
+  } else {
+    const imgEl = card.querySelector("img.card-image");
+    if (imgEl.complete) scheduleLayout();
+    else imgEl.addEventListener("load", scheduleLayout);
   }
 
   card.querySelectorAll(".tag[data-tag]").forEach((el) => {
@@ -237,6 +242,57 @@ function render() {
   filtered.forEach((item, i) => {
     grid.appendChild(renderCard(item, i, filtered.length));
   });
+
+  layoutMasonry();
+}
+
+// Cards are absolutely positioned (not CSS multi-column) because Safari
+// recomputes column fragmentation whenever a fragment's own paint
+// properties change, which flickers the top item of every column on hover.
+const CARD_MIN_WIDTH = 260;
+const GRID_GAP = 28;
+let layoutScheduled = false;
+
+function scheduleLayout() {
+  if (layoutScheduled) return;
+  layoutScheduled = true;
+  requestAnimationFrame(() => {
+    layoutScheduled = false;
+    layoutMasonry();
+  });
+}
+
+function layoutMasonry() {
+  const cards = [...grid.children];
+  if (cards.length === 0) {
+    grid.style.height = "0px";
+    return;
+  }
+
+  const gridStyle = getComputedStyle(grid);
+  const paddingLeft = parseFloat(gridStyle.paddingLeft) || 0;
+  const paddingRight = parseFloat(gridStyle.paddingRight) || 0;
+  const paddingTop = parseFloat(gridStyle.paddingTop) || 0;
+  const paddingBottom = parseFloat(gridStyle.paddingBottom) || 0;
+  const containerWidth = grid.clientWidth - paddingLeft - paddingRight;
+
+  const columns = Math.max(1, Math.floor((containerWidth + GRID_GAP) / (CARD_MIN_WIDTH + GRID_GAP)));
+  const columnWidth = (containerWidth - (columns - 1) * GRID_GAP) / columns;
+  const columnHeights = new Array(columns).fill(0);
+
+  cards.forEach((card) => {
+    card.style.width = `${columnWidth}px`;
+    let col = 0;
+    for (let i = 1; i < columns; i++) {
+      if (columnHeights[i] < columnHeights[col]) col = i;
+    }
+    const left = paddingLeft + col * (columnWidth + GRID_GAP);
+    const top = paddingTop + columnHeights[col];
+    card.style.transform = `translate(${left}px, ${top}px)`;
+    columnHeights[col] += card.offsetHeight + GRID_GAP;
+  });
+
+  grid.style.height = `${paddingTop + Math.max(...columnHeights) - GRID_GAP + paddingBottom}px`;
 }
 
 async function loadGallery() {
@@ -278,5 +334,6 @@ clearBtn.addEventListener("click", () => {
   updateSelectionBar();
 });
 saveBtn.addEventListener("click", saveSelection);
+window.addEventListener("resize", scheduleLayout);
 
 loadGallery();

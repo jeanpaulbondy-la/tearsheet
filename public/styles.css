@@ -241,16 +241,16 @@ body {
 }
 
 .grid {
-  column-width: 260px;
-  column-gap: 1.75rem;
+  position: relative;
   padding: 2rem;
 }
 
 .card {
-  position: relative;
-  break-inside: avoid;
-  margin-bottom: 1.75rem;
+  position: absolute;
+  top: 0;
+  left: 0;
   cursor: pointer;
+  will-change: transform;
 }
 
 .card-surface {
