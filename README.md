@@ -1,6 +1,6 @@
 # Tearsheet
 
-A personal, Pinterest-style reference gallery. Drop in images or videos — screenshots, illustrations, renders, motion references, whatever — let Claude Code catalog them, browse them, and pull a selection into any future project as design reference — or scaffold a Figma or Claude Design starter kit straight from what you selected.
+A personal, Pinterest-style reference gallery. Drop in images or videos, let Claude Code catalog them, then browse and pull a selection into any project — as plain design reference, or scaffolded straight into a new Figma file or Claude Design project.
 
 ## Install
 
@@ -32,7 +32,7 @@ Restart Claude Code so it picks up the new commands.
 1. Drop image files (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`) or video files (`.mp4`, `.mov`, `.webm`, `.m4v`) into the `inbox/` folder.
 2. In Claude Code, inside the `tearsheet` folder, run `/process-inbox` — it renames, tags, and catalogs each one automatically. Videos get a representative frame extracted (via a bundled ffmpeg, no separate install needed) for the palette and gallery thumbnail; cards preview the video on hover.
 
-**Browse:** refresh `localhost:4560` to see them in the gallery.
+**Browse:** refresh `localhost:4560` to see them in the gallery. Search, or filter by category/tag — filters are multi-select, and clicking an active one clears it.
 
 **Use a selection in another project:**
 1. Click images in the gallery to select them, then **Save for Claude Code**.
