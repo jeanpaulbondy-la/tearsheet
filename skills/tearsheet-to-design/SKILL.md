@@ -20,7 +20,7 @@ For each image, decide:
 - **UI source** — plausibly shows an interface: app screen, dashboard, website, visible buttons/nav/cards/forms.
 - **Mood/palette source** — illustration, fine art, type specimen, texture, photography. Contributes color and typographic *feel*, not literal components.
 
-Use the image's own `category`/`tags`/`description` as a first-pass hint before opening it again — most Tearsheet categories (e.g. "Organic Vessel Abstraction," "Display Type Specimens," "Retro-Futurist Space Poster") are self-evidently mood sources, not UI. View any genuinely ambiguous ones with the Read tool to confirm.
+Use the image's own `category`/`tags`/`description` as a first-pass hint before opening it again — most Tearsheet categories (e.g. "Organic Vessel Abstraction," "Typography," "Retro-Futurist Space Poster") are self-evidently mood sources, not UI. View any genuinely ambiguous ones with the Read tool to confirm.
 
 If **zero** images classify as UI sources: say so plainly, and only do Step 4a (color) and 4b (typography) — do not force component extraction onto art. This is an expected, normal outcome, not an error.
 
@@ -51,13 +51,15 @@ const hexes = process.argv.slice(2);
 console.log(JSON.stringify(hexes.map(hex => ({ base: hex, tints: tintRamp(hex) })), null, 2));
 ```
 
-Run it, then declare each step of each ramp as a CSS custom property named `--primitive-<short-descriptive-color-name>-<step>` (e.g. `--primitive-rust-500`, `--primitive-rust-100`) — pick the descriptive name yourself from what you see (a hue/mood word, not "color1"). The 500 step is always the original extracted hex.
+Run it, then declare each step of each ramp as a CSS custom property named `--primitive-<natural-color-name>-<step>` (e.g. `--primitive-coral-500`, `--primitive-seafoam-100`). **The name must be something a designer or developer would actually say out loud** — a real color/mood word (coral, seafoam, rust, dusk, ink, sand, acid, slate), never a placeholder like "color1," "accent-orange," or the raw hex. Pick it by looking at the swatch, not by category. The 500 step is always the original extracted hex.
 
 Propose a light-mode semantic layer aliased to specific ramp steps (not just the flat 500): `--color-bg-primary`, `--color-bg-surface`, `--color-text-primary`, `--color-text-secondary`, `--color-accent-primary` (alias to a ramp's 500), `--color-accent-primary-hover` (alias to that same ramp's 600), `--color-border-default` (adapt names to what the palette actually supports — don't invent roles with no plausible source color). Add `--color-accent-secondary` only if the palette clearly supports two distinct accent hues. Lean on lighter steps (50/100) for subtle backgrounds and darker steps (700/800) for hover/pressed states instead of inventing new primitives for those roles.
 
 Always include **`--color-text-on-accent`** (typically white or near-white, aliased to a dedicated primitive) whenever any accent token exists — components in 4c almost always need text/icon color sitting on top of an accent fill (buttons, badges), and skipping this token up front means adding it mid-build in Step 5 instead. Same logic applies to any other fill that will host text or icons directly: if 4c's component list includes something with reversed/inverted colors, add its "on-X" token here, not later.
 
 **Tint ramps are internal build material only** — they exist to give the semantic layer and component previews more to alias against. Never surface them (or any color/typography output from this skill) back on a Tearsheet gallery card; the card always shows just the 6 raw extracted colors, unrelated to this project.
+
+When documenting the semantic layer in `foundations/colors.html`, label each swatch with **both** its token name and its natural color name, e.g. `--color-accent-primary` / `Coral` — the token name alone forces anyone reading the page to go look up what color it actually is, which defeats the point of naming primitives in natural language to begin with.
 
 **4b. Typography** — From any image with legible type (UI sources, plus type-specimen-style mood images), describe what you see (serif/sans/mono, weight, tracking, mood). Since there's no live font library to query here, pick the closest **web-safe or system font stack** per role — up to three roles: Heading, Body, Mono (e.g. `Heading: "Georgia", "Iowan Old Style", serif`). Name the resulting styles to flag the approximation, e.g. "Heading — approx. Georgia." Never imply an exact font match, and never assume a non-system font is available without a way to load it.
 
