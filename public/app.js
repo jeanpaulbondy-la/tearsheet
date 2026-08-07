@@ -43,24 +43,26 @@ function renderCard(item, index, total) {
     : `<img class="card-image" src="/images/${encodeURIComponent(item.filename)}" alt="${item.title || ""}" loading="lazy" />`;
 
   card.innerHTML = `
-    <div class="card-check">${checkIcon()}</div>
-    ${mediaHtml}
-    <div class="card-body">
-      <div class="card-title-row">
-        <h2 class="card-title">${item.title || "Untitled"}</h2>
-      </div>
-      <div class="card-subtitle">${item.subtitle || ""}</div>
-      <div class="card-tags">
-        ${visibleTags.map((t) => `<span class="tag" data-tag="${t}">${t}</span>`).join("")}
-        ${overflow > 0 ? `<span class="tag tag-overflow">+${overflow}</span>` : ""}
-      </div>
-      ${palette.length > 0 ? `
-      <div class="card-palette">
-        ${palette.map((hex) => `<span class="swatch" style="background:${hex}" title="${hex}"></span>`).join("")}
-      </div>` : ""}
-      <div class="card-footer">
-        <span class="card-category" data-category="${item.category || "Uncategorized"}">${item.category || "Uncategorized"}</span>
-        <span class="card-index">${String(index + 1).padStart(2, "0")} / ${total}</span>
+    <div class="card-surface">
+      <div class="card-check">${checkIcon()}</div>
+      ${mediaHtml}
+      <div class="card-body">
+        <div class="card-title-row">
+          <h2 class="card-title">${item.title || "Untitled"}</h2>
+        </div>
+        <div class="card-subtitle">${item.subtitle || ""}</div>
+        <div class="card-tags">
+          ${visibleTags.map((t) => `<span class="tag" data-tag="${t}">${t}</span>`).join("")}
+          ${overflow > 0 ? `<span class="tag tag-overflow">+${overflow}</span>` : ""}
+        </div>
+        ${palette.length > 0 ? `
+        <div class="card-palette">
+          ${palette.map((hex) => `<span class="swatch" style="background:${hex}" title="${hex}"></span>`).join("")}
+        </div>` : ""}
+        <div class="card-footer">
+          <span class="card-category" data-category="${item.category || "Uncategorized"}">${item.category || "Uncategorized"}</span>
+          <span class="card-index">${String(index + 1).padStart(2, "0")} / ${total}</span>
+        </div>
       </div>
     </div>
   `;

@@ -247,25 +247,27 @@ body {
 }
 
 .card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  overflow: hidden;
-  cursor: pointer;
   position: relative;
   break-inside: avoid;
   margin-bottom: 1.75rem;
+  cursor: pointer;
+}
+
+.card-surface {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
   opacity: 0.55;
   transition: border-color 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
-.card:hover {
+.card:hover .card-surface {
   opacity: 1;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
   border-color: var(--ink-soft);
-  z-index: 2;
 }
 
-.card.selected {
+.card.selected .card-surface {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent);
 }
