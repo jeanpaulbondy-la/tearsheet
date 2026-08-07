@@ -24,6 +24,8 @@ Use the image's own `category`/`tags`/`description` as a first-pass hint before 
 
 If **zero** images classify as UI sources: say so plainly, and only do Step 4a (color) and 4b (typography) — do not force component extraction onto art. This is an expected, normal outcome, not an error.
 
+**Never surface a real brand, product, or company name anywhere in the output** — not in References-page captions, component names, layer names, or text placed inside a component. UI-source screenshots routinely carry third-party names (the site's own brand, client-logo strips, feature/product names in body copy), and none of that belongs in a generated Figma file. Refer to each source by what it generically is instead (e.g. "the fintech landing page," "the travel booking hero," "an agency homepage") and swap any literal third-party logos or names in a component mockup (e.g. a "Trusted by" logo row) for made-up placeholder names.
+
 ## Step 3 — Resolve the Figma target
 
 1. Check `~/.claude/tearsheet-figma-plan.json` for a cached `{ planKey, planName }`. If present, use it and skip to 3.3.
