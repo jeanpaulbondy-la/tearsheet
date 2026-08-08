@@ -278,7 +278,7 @@
   // tagline
   ctx.fillStyle = "#33383d";
   ctx.font = `italic ${px(25)}px Georgia, "Iowan Old Style", serif`;
-  ctx.fillText("Catalogs the color, mood, and UI patterns in every reference.", left, top + px(164));
+  ctx.fillText("Reads the mood, color, type, and UI in every reference.", left, top + px(164));
   ctx.fillStyle = accent;
   ctx.font = `italic ${px(25)}px Georgia, "Iowan Old Style", serif`;
   ctx.fillText("Scaffolds it straight into Figma or Claude Design.", left, top + px(200));
@@ -324,13 +324,6 @@
   ctx.font = `${px(15)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
   ctx.textAlign = "right";
   ctx.fillText("github.com/jeanpaulbondy-la/tearsheet", W - px(48), H - px(40));
-  ctx.textAlign = "left";
-
-  // credit, aligned to the same right edge
-  ctx.fillStyle = textSoft;
-  ctx.font = `${px(15)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
-  ctx.textAlign = "right";
-  ctx.fillText("github.com/jeanpaulbondy-la/tearsheet", rightEdge, px(600));
   ctx.textAlign = "left";
 
   // ---- download ----
