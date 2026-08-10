@@ -13,6 +13,9 @@ const selectionBar = document.getElementById("selection-bar");
 const selectionCountEl = document.getElementById("selection-count");
 const clearBtn = document.getElementById("clear-selection");
 const saveBtn = document.getElementById("save-selection");
+const lightboxEl = document.getElementById("lightbox");
+const lightboxFrameEl = lightboxEl.querySelector(".lightbox-frame");
+const lightboxCloseBtn = document.getElementById("lightbox-close");
 
 let items = [];
 let selected = new Set();
@@ -69,6 +72,12 @@ function renderCard(item, index, total) {
 
   card.addEventListener("click", () => toggleSelect(item.id, card));
 
+  const mediaEl = card.querySelector(".card-image");
+  mediaEl.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openLightbox(item);
+  });
+
   if (isVideo) {
     const videoEl = card.querySelector("video.card-image");
     card.addEventListener("mouseenter", () => videoEl.play().catch(() => {}));
@@ -97,6 +106,19 @@ function renderCard(item, index, total) {
   });
 
   return card;
+}
+
+function openLightbox(item) {
+  const isVideo = item.mediaType === "video";
+  lightboxFrameEl.innerHTML = isVideo
+    ? `<video src="/images/${encodeURIComponent(item.filename)}" controls autoplay loop playsinline></video>`
+    : `<img src="/images/${encodeURIComponent(item.filename)}" alt="${item.title || ""}" />`;
+  lightboxEl.hidden = false;
+}
+
+function closeLightbox() {
+  lightboxEl.hidden = true;
+  lightboxFrameEl.innerHTML = "";
 }
 
 function toggleSelect(id, card) {
@@ -335,5 +357,12 @@ clearBtn.addEventListener("click", () => {
 });
 saveBtn.addEventListener("click", saveSelection);
 window.addEventListener("resize", scheduleLayout);
+lightboxCloseBtn.addEventListener("click", closeLightbox);
+lightboxEl.addEventListener("click", (e) => {
+  if (e.target === lightboxEl) closeLightbox();
+});
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !lightboxEl.hidden) closeLightbox();
+});
 
 loadGallery();
