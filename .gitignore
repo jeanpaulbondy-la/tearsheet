@@ -1,6 +1,9 @@
 node_modules/
 .DS_Store
 
+# Social post assets (clip, stills), kept out of the repo
+assets/social/
+
 # Local launcher built by `npm run setup`, and its server log
 Tearsheet.app/
 Start Tearsheet.command
