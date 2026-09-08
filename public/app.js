@@ -335,6 +335,7 @@ function tagCounts() {
 
 function renderCategoryFilters() {
   const counts = categoryCounts();
+  categoryFiltersEl.closest(".index-section").hidden = counts.length === 0;
   categoryFiltersEl.innerHTML = counts
     .map(
       ([cat, count]) => `
@@ -357,6 +358,7 @@ function renderTagFilterList() {
   const extra = [...activeTags].filter((t) => !recurring.some(([tag]) => tag === t));
   const list = [...recurring, ...extra.map((t) => [t, null])];
 
+  tagFilterListEl.closest(".index-section").hidden = list.length === 0;
   tagFilterListEl.innerHTML = list
     .map(
       ([tag, count]) => `
