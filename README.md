@@ -32,7 +32,7 @@ Restart Claude Code so it picks up the new commands.
 1. Drop image files (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`) or video files (`.mp4`, `.mov`, `.webm`, `.m4v`) into the `inbox/` folder.
 2. In Claude Code, inside the `tearsheet` folder, run `/process-inbox`. It renames, tags, catalogs, and extracts a real color palette from each one automatically. Videos get a representative frame extracted (via a bundled ffmpeg, no separate install needed) for the palette and gallery thumbnail; cards preview the video on hover.
 
-**Browse:** refresh `localhost:4560` to see them in the gallery. Search, or filter by category/tag (filters are multi-select; click an active one to clear it).
+**Browse:** refresh `localhost:4560` to see them in the gallery. Search (press `/`), or filter from the index rail by category and recurring tag (filters are multi-select; click an active one to clear it). Click any image to open it full screen with its description, extracted palette (click a hex to copy it), and tags; use the arrow keys to move between references and `Esc` to close.
 
 **Use a selection in another project:**
 1. Click images in the gallery to select them, then **Save for Claude Code**.

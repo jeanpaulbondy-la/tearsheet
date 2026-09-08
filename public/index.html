@@ -4,56 +4,92 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tearsheet</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="preload" href="/fonts/bricolage-grotesque-wght.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/dm-mono-400.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <h1>Tearsheet</h1>
-      <p class="byline"><a href="https://jbondy.com" target="_blank" rel="noopener">Created by Jean-Paul Bondy 2026</a></p>
+      <a class="wordmark" href="/">Tearsheet</a>
+      <span id="result-count" class="index-count" aria-live="polite"></span>
     </div>
-    <div class="search-wrap">
-      <input id="search" type="text" placeholder="Search titles, tags, categories…" autocomplete="off" />
-      <span id="result-count" class="result-count"></span>
+
+    <label class="search" for="search">
+      <svg class="search-glyph" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4" />
+        <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+      </svg>
+      <input id="search" type="text" placeholder="Search the index" autocomplete="off" spellcheck="false" />
+      <kbd class="search-key" aria-hidden="true">/</kbd>
+    </label>
+
+    <div class="topbar-right">
+      <p class="byline"><a href="https://jbondy.com" target="_blank" rel="noopener">Created by Jean-Paul Bondy 2026</a></p>
+      <button id="index-toggle" type="button" class="index-toggle" aria-expanded="false" aria-controls="index">Index</button>
     </div>
   </header>
 
-  <div class="filterbar">
-    <div id="category-filters" class="category-filters"></div>
-    <details id="tag-filter" class="tag-filter">
-      <summary>Tags</summary>
-      <div id="tag-filter-list" class="tag-filter-list"></div>
-    </details>
+  <div class="shell">
+    <aside id="index" class="index">
+      <div class="index-scroll">
+        <section class="index-section">
+          <h2 class="index-label">Categories</h2>
+          <nav id="category-filters" class="index-list" aria-label="Categories"></nav>
+        </section>
+
+        <section class="index-section">
+          <h2 class="index-label">Recurring motifs</h2>
+          <div id="tag-filter-list" class="motif-list"></div>
+          <p class="index-note">Tags shared by two or more references. Every other tag is one click away on its card.</p>
+        </section>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <div id="active-filters" class="active-filters" hidden>
+        <span id="active-filters-list" class="active-filters-list"></span>
+        <button id="clear-filters" type="button" class="link-btn">Clear all</button>
+      </div>
+
+      <div id="grid" class="grid"></div>
+
+      <p id="empty" class="empty" hidden>
+        Nothing in the index yet. Drop images or videos into <code>inbox/</code> and run <code>/process-inbox</code> in Claude Code.
+      </p>
+
+      <p id="no-results" class="empty" hidden>
+        No references match this search and filter set.
+        <br />
+        <button id="clear-filters-2" type="button" class="link-btn">Clear filters</button>
+      </p>
+    </main>
   </div>
 
-  <div id="active-filters" class="active-filters" hidden>
-    <span id="active-filters-list" class="active-filters-list"></span>
-    <button id="clear-filters" type="button" class="clear-filters">Clear filters</button>
-  </div>
-
-  <main id="grid" class="grid"></main>
-
-  <p id="empty" class="empty" hidden>
-    Nothing here yet — drop images or videos into <code>inbox/</code> and run <code>/process-inbox</code> in Claude Code.
-  </p>
-
-  <p id="no-results" class="empty" hidden>
-    No matches for the current search and filters.
-    <br />
-    <button id="clear-filters-2" type="button" class="btn-secondary">Clear filters</button>
-  </p>
-
-  <div id="selection-bar" class="selection-bar" hidden>
-    <span id="selection-count">0 selected</span>
-    <div class="selection-actions">
-      <button id="clear-selection" type="button" class="btn-secondary">Clear</button>
+  <div id="selection-bar" class="tray" hidden>
+    <span id="selection-count" class="tray-count">0 selected</span>
+    <div class="tray-actions">
+      <button id="clear-selection" type="button" class="btn-ghost">Clear</button>
       <button id="save-selection" type="button" class="btn-primary">Save for Claude Code</button>
     </div>
   </div>
 
-  <div id="lightbox" class="lightbox" hidden>
-    <button id="lightbox-close" type="button" class="lightbox-close" aria-label="Close">×</button>
-    <div class="lightbox-frame"></div>
+  <div id="lightbox" class="detail" role="dialog" aria-modal="true" aria-label="Reference detail" tabindex="-1" hidden>
+    <button id="lightbox-close" type="button" class="detail-close" aria-label="Close">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
+    </button>
+    <button id="detail-prev" type="button" class="detail-nav detail-nav-prev" aria-label="Previous">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+    </button>
+    <button id="detail-next" type="button" class="detail-nav detail-nav-next" aria-label="Next">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+    </button>
+    <div class="detail-stage">
+      <div class="lightbox-frame"></div>
+    </div>
+    <aside id="detail-panel" class="detail-panel"></aside>
   </div>
 
   <script src="/app.js"></script>

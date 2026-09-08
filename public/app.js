@@ -13,69 +13,105 @@ const selectionBar = document.getElementById("selection-bar");
 const selectionCountEl = document.getElementById("selection-count");
 const clearBtn = document.getElementById("clear-selection");
 const saveBtn = document.getElementById("save-selection");
+const indexToggle = document.getElementById("index-toggle");
 const lightboxEl = document.getElementById("lightbox");
 const lightboxFrameEl = lightboxEl.querySelector(".lightbox-frame");
 const lightboxCloseBtn = document.getElementById("lightbox-close");
+const detailPanel = document.getElementById("detail-panel");
+const detailPrev = document.getElementById("detail-prev");
+const detailNext = document.getElementById("detail-next");
 
 let items = [];
+let visibleItems = [];
 let selected = new Set();
 let activeCategories = new Set();
 let activeTags = new Set();
+let detailIndex = -1;
+let hasRenderedOnce = false;
+
+const MOTIF_MIN_COUNT = 2;
+
+function esc(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function mediaUrl(filename) {
+  return `/images/${encodeURIComponent(filename || "")}`;
+}
+
+function pad(n, width) {
+  return String(n).padStart(width, "0");
+}
+
+function indexWidth(total) {
+  return Math.max(2, String(total).length);
+}
 
 function checkIcon() {
-  return `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  return `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path d="M3 8.5L6.2 11.5L13 4.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 }
+
+/* ---------- cards ---------- */
 
 function renderCard(item, index, total) {
   const card = document.createElement("article");
   card.className = "card";
   card.dataset.id = item.id;
+  card.style.setProperty("--i", Math.min(index, 24));
   if (selected.has(item.id)) card.classList.add("selected");
+  if (!hasRenderedOnce) card.classList.add("entering");
 
   const tags = item.tags || [];
   const visibleTags = tags.slice(0, 3);
   const overflow = tags.length - visibleTags.length;
   const palette = item.palette || [];
   const isVideo = item.mediaType === "video";
+  const category = item.category || "Uncategorized";
 
   const mediaHtml = isVideo
-    ? `<video class="card-image" src="/images/${encodeURIComponent(item.filename)}" poster="/images/${encodeURIComponent(item.thumbnail || "")}" muted loop playsinline preload="metadata"></video>
-       <span class="card-video-badge">▶</span>`
-    : `<img class="card-image" src="/images/${encodeURIComponent(item.filename)}" alt="${item.title || ""}" loading="lazy" />`;
+    ? `<video class="card-image" src="${mediaUrl(item.filename)}" poster="${mediaUrl(item.thumbnail)}" muted loop playsinline preload="metadata"></video>
+       <span class="card-video-badge">VIDEO</span>`
+    : `<img class="card-image" src="${mediaUrl(item.filename)}" alt="${esc(item.title)}" loading="lazy" />`;
 
   card.innerHTML = `
     <div class="card-surface">
-      <div class="card-check">${checkIcon()}</div>
-      ${mediaHtml}
-      <div class="card-body">
-        <div class="card-title-row">
-          <h2 class="card-title">${item.title || "Untitled"}</h2>
-        </div>
-        <div class="card-subtitle">${item.subtitle || ""}</div>
-        <div class="card-tags">
-          ${visibleTags.map((t) => `<span class="tag" data-tag="${t}">${t}</span>`).join("")}
-          ${overflow > 0 ? `<span class="tag tag-overflow">+${overflow}</span>` : ""}
-        </div>
-        ${palette.length > 0 ? `
+      <div class="card-media">
+        ${mediaHtml}
+        ${palette.length ? `
         <div class="card-palette">
-          ${palette.map((hex) => `<span class="swatch" style="background:${hex}" title="${hex}"></span>`).join("")}
+          ${palette.map((hex) => `<span class="swatch" style="background:${esc(hex)}" title="${esc(hex)}"></span>`).join("")}
         </div>` : ""}
-        <div class="card-footer">
-          <span class="card-category" data-category="${item.category || "Uncategorized"}">${item.category || "Uncategorized"}</span>
-          <span class="card-index">${String(index + 1).padStart(2, "0")} / ${total}</span>
+        <div class="card-check" role="checkbox" aria-checked="${selected.has(item.id)}" aria-label="Select">${checkIcon()}</div>
+      </div>
+      <div class="card-meta">
+        <div class="card-kicker">
+          <span class="card-index">${pad(index + 1, indexWidth(total))}</span>
+          <span class="card-category" data-category="${esc(category)}">${esc(category)}</span>
         </div>
+        <h2 class="card-title">${esc(item.title || "Untitled")}</h2>
+        ${item.subtitle ? `<div class="card-subtitle">${esc(item.subtitle)}</div>` : ""}
+        ${tags.length ? `
+        <div class="card-tags">
+          ${visibleTags.map((t) => `<span class="tag" data-tag="${esc(t)}">${esc(t)}</span>`).join("")}
+          ${overflow > 0 ? `<span class="tag tag-overflow">+${overflow}</span>` : ""}
+        </div>` : ""}
       </div>
     </div>
   `;
 
-  card.addEventListener("click", () => toggleSelect(item.id, card));
+  card.addEventListener("click", () => toggleSelect(item.id));
 
   const mediaEl = card.querySelector(".card-image");
   mediaEl.addEventListener("click", (e) => {
     e.stopPropagation();
-    openLightbox(item);
+    openDetail(index);
   });
 
   if (isVideo) {
@@ -99,48 +135,176 @@ function renderCard(item, index, total) {
     });
   });
 
-  const categoryEl = card.querySelector(".card-category[data-category]");
-  categoryEl.addEventListener("click", (e) => {
+  card.querySelector(".card-category").addEventListener("click", (e) => {
     e.stopPropagation();
-    toggleCategoryFilter(categoryEl.dataset.category);
+    toggleCategoryFilter(category);
   });
 
   return card;
 }
 
-function openLightbox(item) {
-  const isVideo = item.mediaType === "video";
-  lightboxFrameEl.innerHTML = isVideo
-    ? `<video src="/images/${encodeURIComponent(item.filename)}" controls autoplay loop playsinline></video>`
-    : `<img src="/images/${encodeURIComponent(item.filename)}" alt="${item.title || ""}" />`;
-  lightboxEl.hidden = false;
+function syncCardSelection(id) {
+  const card = grid.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
+  if (!card) return;
+  const on = selected.has(id);
+  card.classList.toggle("selected", on);
+  const check = card.querySelector(".card-check");
+  if (check) check.setAttribute("aria-checked", String(on));
 }
 
-function closeLightbox() {
-  lightboxEl.hidden = true;
-  lightboxFrameEl.innerHTML = "";
-}
-
-function toggleSelect(id, card) {
-  if (selected.has(id)) {
-    selected.delete(id);
-    card.classList.remove("selected");
-  } else {
-    selected.add(id);
-    card.classList.add("selected");
-  }
+function toggleSelect(id) {
+  if (selected.has(id)) selected.delete(id);
+  else selected.add(id);
+  syncCardSelection(id);
   updateSelectionBar();
+  if (!lightboxEl.hidden) renderDetailActions();
 }
 
 function updateSelectionBar() {
   const count = selected.size;
   selectionBar.hidden = count === 0;
-  selectionCountEl.textContent = `${count} selected`;
+  selectionCountEl.textContent = count === 1 ? "1 selected" : `${count} selected`;
 }
+
+/* ---------- detail ---------- */
+
+function openDetail(index) {
+  detailIndex = index;
+  renderDetail();
+  lightboxEl.hidden = false;
+  lightboxEl.focus({ preventScroll: true });
+}
+
+function closeDetail() {
+  lightboxEl.hidden = true;
+  lightboxFrameEl.innerHTML = "";
+  detailPanel.innerHTML = "";
+  detailIndex = -1;
+}
+
+function stepDetail(delta) {
+  if (lightboxEl.hidden) return;
+  const next = detailIndex + delta;
+  if (next < 0 || next >= visibleItems.length) return;
+  detailIndex = next;
+  renderDetail();
+}
+
+function formatDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function renderDetail() {
+  const item = visibleItems[detailIndex];
+  if (!item) return;
+  const isVideo = item.mediaType === "video";
+  const total = visibleItems.length;
+  const category = item.category || "Uncategorized";
+  const palette = item.palette || [];
+  const tags = item.tags || [];
+
+  lightboxFrameEl.innerHTML = isVideo
+    ? `<video src="${mediaUrl(item.filename)}" controls autoplay loop playsinline></video>`
+    : `<img src="${mediaUrl(item.filename)}" alt="${esc(item.title)}" />`;
+
+  detailPanel.innerHTML = `
+    <div class="detail-kicker">
+      <span>${pad(detailIndex + 1, indexWidth(total))} / ${pad(total, indexWidth(total))}</span>
+      <span class="card-category" data-category="${esc(category)}">${esc(category)}</span>
+    </div>
+    <h2 class="detail-title">${esc(item.title || "Untitled")}</h2>
+    ${item.subtitle ? `<div class="detail-subtitle">${esc(item.subtitle)}</div>` : ""}
+    ${item.description ? `<p class="detail-desc">${esc(item.description)}</p>` : ""}
+
+    ${palette.length ? `
+    <section class="detail-section">
+      <h3 class="detail-label">Extracted palette</h3>
+      <div class="detail-palette">
+        ${palette.map((hex) => `
+          <button type="button" class="detail-swatch" data-hex="${esc(hex)}" title="Copy ${esc(hex)}">
+            <span class="detail-swatch-color" style="background:${esc(hex)}"></span>
+            <span class="detail-hex">${esc(hex)}</span>
+            <span class="detail-copy">Copy</span>
+          </button>`).join("")}
+      </div>
+    </section>` : ""}
+
+    ${tags.length ? `
+    <section class="detail-section">
+      <h3 class="detail-label">Tags</h3>
+      <div class="detail-tags">
+        ${tags.map((t) => `<button type="button" class="motif" data-tag="${esc(t)}">${esc(t)}</button>`).join("")}
+      </div>
+    </section>` : ""}
+
+    <section class="detail-section">
+      <dl class="detail-meta">
+        <dt>File</dt><dd>${esc(item.filename)}</dd>
+        ${item.addedAt ? `<dt>Added</dt><dd>${esc(formatDate(item.addedAt))}</dd>` : ""}
+        ${isVideo ? `<dt>Type</dt><dd>Video reference</dd>` : ""}
+      </dl>
+    </section>
+
+    <div class="detail-actions" id="detail-actions"></div>
+  `;
+
+  renderDetailActions();
+
+  detailPanel.querySelectorAll(".detail-swatch").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const hex = btn.dataset.hex;
+      try {
+        await navigator.clipboard.writeText(hex);
+        btn.classList.add("copied");
+        btn.querySelector(".detail-copy").textContent = "Copied";
+        setTimeout(() => {
+          btn.classList.remove("copied");
+          btn.querySelector(".detail-copy").textContent = "Copy";
+        }, 1400);
+      } catch (err) {
+        btn.querySelector(".detail-copy").textContent = hex;
+      }
+    });
+  });
+
+  detailPanel.querySelectorAll(".motif[data-tag]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      closeDetail();
+      toggleTagFilter(btn.dataset.tag);
+    });
+  });
+
+  detailPanel.querySelector(".card-category").addEventListener("click", () => {
+    closeDetail();
+    toggleCategoryFilter(category);
+  });
+
+  detailPrev.disabled = detailIndex <= 0;
+  detailNext.disabled = detailIndex >= total - 1;
+  detailPanel.scrollTop = 0;
+}
+
+function renderDetailActions() {
+  const actions = document.getElementById("detail-actions");
+  const item = visibleItems[detailIndex];
+  if (!actions || !item) return;
+  const on = selected.has(item.id);
+  actions.innerHTML = `
+    <button type="button" class="${on ? "btn-ghost" : "btn-primary"}" id="detail-select">
+      ${on ? "Remove from selection" : "Add to selection"}
+    </button>
+  `;
+  actions.querySelector("#detail-select").addEventListener("click", () => toggleSelect(item.id));
+}
+
+/* ---------- filtering ---------- */
 
 function matchesSearch(item, query) {
   if (!query) return true;
-  const haystack = [item.title, item.subtitle, item.category, ...(item.tags || [])]
+  const haystack = [item.title, item.subtitle, item.category, item.description, ...(item.tags || [])]
     .join(" ")
     .toLowerCase();
   return haystack.includes(query.toLowerCase());
@@ -179,30 +343,36 @@ function renderCategoryFilters() {
   categoryFiltersEl.innerHTML = counts
     .map(
       ([cat, count]) => `
-    <button type="button" class="pill${activeCategories.has(cat) ? " active" : ""}" data-category="${cat}">
-      ${cat} <span class="pill-count">${count}</span>
+    <button type="button" class="index-item${activeCategories.has(cat) ? " active" : ""}" data-category="${esc(cat)}" aria-pressed="${activeCategories.has(cat)}">
+      <span>${esc(cat)}</span>
+      <span class="index-count-cell">${count}</span>
     </button>`
     )
     .join("");
-  categoryFiltersEl.querySelectorAll(".pill").forEach((btn) => {
-    btn.addEventListener("click", () => toggleCategoryFilter(btn.dataset.category));
+  categoryFiltersEl.querySelectorAll(".index-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      toggleCategoryFilter(btn.dataset.category);
+      closeIndexDrawer();
+    });
   });
 }
 
 function renderTagFilterList() {
-  const counts = tagCounts();
-  tagFilterListEl.innerHTML = counts
+  const recurring = tagCounts().filter(([, count]) => count >= MOTIF_MIN_COUNT);
+  const extra = [...activeTags].filter((t) => !recurring.some(([tag]) => tag === t));
+  const list = [...recurring, ...extra.map((t) => [t, null])];
+
+  tagFilterListEl.innerHTML = list
     .map(
       ([tag, count]) => `
-    <label class="tag-filter-item">
-      <input type="checkbox" data-tag="${tag}" ${activeTags.has(tag) ? "checked" : ""} />
-      <span>${tag}</span>
-      <span class="pill-count">${count}</span>
-    </label>`
+    <button type="button" class="index-item index-item-motif${activeTags.has(tag) ? " active" : ""}" data-tag="${esc(tag)}" aria-pressed="${activeTags.has(tag)}">
+      <span>${esc(tag)}</span>
+      <span class="index-count-cell">${count ?? ""}</span>
+    </button>`
     )
     .join("");
-  tagFilterListEl.querySelectorAll("input[type=checkbox]").forEach((cb) => {
-    cb.addEventListener("change", () => toggleTagFilter(cb.dataset.tag));
+  tagFilterListEl.querySelectorAll(".index-item").forEach((btn) => {
+    btn.addEventListener("click", () => toggleTagFilter(btn.dataset.tag));
   });
 }
 
@@ -213,7 +383,9 @@ function renderActiveFilters() {
 
   activeFiltersEl.hidden = chips.length === 0;
   activeFiltersListEl.innerHTML = chips
-    .map((c) => `<button type="button" class="chip" data-type="${c.type}" data-label="${c.label}">${c.label} ×</button>`)
+    .map(
+      (c) => `<button type="button" class="chip" data-type="${c.type}" data-label="${esc(c.label)}">${esc(c.label)}<span class="chip-x" aria-hidden="true">×</span></button>`
+    )
     .join("");
   activeFiltersListEl.querySelectorAll(".chip").forEach((chip) => {
     chip.addEventListener("click", () => {
@@ -250,28 +422,40 @@ function clearFilters() {
 
 function render() {
   const query = searchEl.value.trim();
-  const filtered = items.filter(
+  visibleItems = items.filter(
     (item) => matchesCategory(item) && matchesTags(item) && matchesSearch(item, query)
   );
 
   grid.innerHTML = "";
   emptyEl.hidden = items.length !== 0;
-  noResultsEl.hidden = items.length === 0 || filtered.length !== 0;
-  resultCountEl.textContent = items.length ? `${filtered.length} / ${items.length}` : "";
+  noResultsEl.hidden = items.length === 0 || visibleItems.length !== 0;
+
+  if (items.length) {
+    const w = indexWidth(items.length);
+    resultCountEl.textContent =
+      visibleItems.length === items.length
+        ? `${pad(items.length, w)} references`
+        : `${pad(visibleItems.length, w)} of ${pad(items.length, w)}`;
+  } else {
+    resultCountEl.textContent = "";
+  }
 
   if (items.length === 0) return;
 
-  filtered.forEach((item, i) => {
-    grid.appendChild(renderCard(item, i, filtered.length));
+  visibleItems.forEach((item, i) => {
+    grid.appendChild(renderCard(item, i, visibleItems.length));
   });
 
   layoutMasonry();
+  hasRenderedOnce = true;
 }
 
+/* ---------- masonry ---------- */
 // Cards are absolutely positioned (not CSS multi-column) because Safari
 // recomputes column fragmentation whenever a fragment's own paint
 // properties change, which flickers the top item of every column on hover.
-const CARD_MIN_WIDTH = 260;
+
+const CARD_MIN_WIDTH = 250;
 const GRID_GAP = 28;
 let layoutScheduled = false;
 
@@ -317,6 +501,8 @@ function layoutMasonry() {
   grid.style.height = `${paddingTop + Math.max(...columnHeights) - GRID_GAP + paddingBottom}px`;
 }
 
+/* ---------- data + selection ---------- */
+
 async function loadGallery() {
   const res = await fetch("/data/gallery.json", { cache: "no-store" });
   items = await res.json();
@@ -336,7 +522,7 @@ async function saveSelection() {
       body: JSON.stringify({ images: selectedItems }),
     });
     const data = await res.json();
-    saveBtn.textContent = data.ok ? "Saved ✓" : "Failed";
+    saveBtn.textContent = data.ok ? "Saved" : "Failed";
   } catch (err) {
     saveBtn.textContent = "Failed";
   } finally {
@@ -347,22 +533,72 @@ async function saveSelection() {
   }
 }
 
+/* ---------- index drawer ---------- */
+
+function closeIndexDrawer() {
+  document.body.classList.remove("index-open");
+  indexToggle.setAttribute("aria-expanded", "false");
+}
+
+function toggleIndexDrawer() {
+  const open = document.body.classList.toggle("index-open");
+  indexToggle.setAttribute("aria-expanded", String(open));
+}
+
+/* ---------- wiring ---------- */
+
 searchEl.addEventListener("input", render);
 clearFiltersBtn.addEventListener("click", clearFilters);
 clearFiltersBtn2.addEventListener("click", clearFilters);
 clearBtn.addEventListener("click", () => {
   selected.clear();
-  render();
+  grid.querySelectorAll(".card.selected").forEach((card) => card.classList.remove("selected"));
+  grid.querySelectorAll(".card-check").forEach((c) => c.setAttribute("aria-checked", "false"));
   updateSelectionBar();
+  if (!lightboxEl.hidden) renderDetailActions();
 });
 saveBtn.addEventListener("click", saveSelection);
+indexToggle.addEventListener("click", toggleIndexDrawer);
 window.addEventListener("resize", scheduleLayout);
-lightboxCloseBtn.addEventListener("click", closeLightbox);
+
+lightboxCloseBtn.addEventListener("click", closeDetail);
+detailPrev.addEventListener("click", () => stepDetail(-1));
+detailNext.addEventListener("click", () => stepDetail(1));
 lightboxEl.addEventListener("click", (e) => {
-  if (e.target === lightboxEl) closeLightbox();
+  if (e.target === lightboxEl || e.target.classList.contains("detail-stage")) closeDetail();
 });
+
 window.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !lightboxEl.hidden) closeLightbox();
+  const typing = e.target === searchEl;
+
+  if (!lightboxEl.hidden) {
+    if (e.key === "Escape") closeDetail();
+    else if (e.key === "ArrowLeft") stepDetail(-1);
+    else if (e.key === "ArrowRight") stepDetail(1);
+    return;
+  }
+
+  if (e.key === "/" && !typing && !e.metaKey && !e.ctrlKey) {
+    e.preventDefault();
+    searchEl.focus();
+    searchEl.select();
+  } else if (e.key === "Escape") {
+    if (document.body.classList.contains("index-open")) closeIndexDrawer();
+    else if (typing) {
+      if (searchEl.value) {
+        searchEl.value = "";
+        render();
+      } else {
+        searchEl.blur();
+      }
+    }
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (!document.body.classList.contains("index-open")) return;
+  if (e.target.closest("#index") || e.target.closest("#index-toggle")) return;
+  closeIndexDrawer();
 });
 
 loadGallery();
