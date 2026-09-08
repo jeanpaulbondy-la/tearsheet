@@ -163,9 +163,15 @@ function updateSelectionBar() {
 
 /* ---------- detail ---------- */
 
+function setHash(item) {
+  const url = item ? `#ref=${encodeURIComponent(item.id)}` : location.pathname + location.search;
+  history.replaceState(null, "", url);
+}
+
 function openDetail(index) {
   detailIndex = index;
   renderDetail();
+  setHash(visibleItems[index]);
   lightboxEl.hidden = false;
   lightboxEl.focus({ preventScroll: true });
 }
@@ -175,6 +181,7 @@ function closeDetail() {
   lightboxFrameEl.innerHTML = "";
   detailPanel.innerHTML = "";
   detailIndex = -1;
+  setHash(null);
 }
 
 function stepDetail(delta) {
@@ -183,6 +190,15 @@ function stepDetail(delta) {
   if (next < 0 || next >= visibleItems.length) return;
   detailIndex = next;
   renderDetail();
+  setHash(visibleItems[next]);
+}
+
+function openFromHash() {
+  const match = location.hash.match(/^#ref=(.+)$/);
+  if (!match) return;
+  const id = decodeURIComponent(match[1]);
+  const index = visibleItems.findIndex((item) => item.id === id);
+  if (index >= 0) openDetail(index);
 }
 
 function formatDate(iso) {
@@ -454,6 +470,7 @@ async function loadGallery() {
   renderCategoryFilters();
   renderTagFilterList();
   render();
+  openFromHash();
 }
 
 async function saveSelection() {
@@ -537,6 +554,11 @@ window.addEventListener("keydown", (e) => {
       }
     }
   }
+});
+
+window.addEventListener("hashchange", () => {
+  if (location.hash.startsWith("#ref=")) openFromHash();
+  else if (!lightboxEl.hidden) closeDetail();
 });
 
 document.addEventListener("click", (e) => {

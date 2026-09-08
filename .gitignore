@@ -1,6 +1,12 @@
 node_modules/
 .DS_Store
 
+# Local launcher built by `npm run setup`, and its server log
+Tearsheet.app/
+Start Tearsheet.command
+.tearsheet-server.log
+.claude/launch.json
+
 # Personal library data — generated locally by /process-inbox, not shared
 data/gallery.json
 images/*
