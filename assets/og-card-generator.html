@@ -1,337 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
 <meta charset="UTF-8" />
-<title>Tearsheet: social preview card</title>
+<title>Tearsheet social preview card</title>
+<!--
+  Source for assets/og-card.png (1280x640, GitHub's social-preview size).
+  Built from the real UI anatomy so the card is the product, not a mockup.
+  Render with headless Chrome from the project root:
+
+    python3 -m http.server 4610
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
+      --window-size=1280,640 --force-device-scale-factor=2 --hide-scrollbars \
+      --screenshot=og-2x.png http://localhost:4610/assets/og-card-generator.html
+    sips -z 640 1280 og-2x.png --out assets/og-card.png
+
+  Fonts come from ../public/fonts; the reference images come from ../images
+  (your own gallery, not part of the repo), so swap the six <img> sources for
+  any of your own items if you regenerate it.
+-->
 <style>
+  @font-face {
+    font-family: "Bricolage Grotesque";
+    src: url("../public/fonts/bricolage-grotesque-wght.woff2") format("woff2");
+    font-weight: 200 800;
+  }
+  @font-face {
+    font-family: "DM Mono";
+    src: url("../public/fonts/dm-mono-400.woff2") format("woff2");
+    font-weight: 400;
+  }
+  @font-face {
+    font-family: "DM Mono";
+    src: url("../public/fonts/dm-mono-500.woff2") format("woff2");
+    font-weight: 500;
+  }
+
   :root {
-    --page-bg: #f3f1ec;
-    --page-ink: #1c1f22;
-    --page-ink-soft: #6b6f74;
-    --page-border: #d9d6cd;
-    --page-accent: #5b6f89;
-    --card-surface: #fff;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --page-bg: #14171a;
-      --page-ink: #e5e7ea;
-      --page-ink-soft: #8b929b;
-      --page-border: #2d3238;
-      --card-surface: #1c2024;
-    }
-  }
-
-  :root[data-theme="dark"] {
-    --page-bg: #14171a;
-    --page-ink: #e5e7ea;
-    --page-ink-soft: #8b929b;
-    --page-border: #2d3238;
-    --card-surface: #1c2024;
-  }
-
-  :root[data-theme="light"] {
-    --page-bg: #f3f1ec;
-    --page-ink: #1c1f22;
-    --page-ink-soft: #6b6f74;
-    --page-border: #d9d6cd;
-    --card-surface: #fff;
+    --bg: #0f0e0c;
+    --surface: #161512;
+    --line: rgba(255, 250, 240, 0.09);
+    --line-strong: rgba(255, 250, 240, 0.2);
+    --ink: #ece8e0;
+    --ink-2: #a39d92;
+    --ink-3: #6b665d;
+    --accent: #5b74ff;
+    --sans: "Bricolage Grotesque", system-ui, sans-serif;
+    --mono: "DM Mono", ui-monospace, Menlo, monospace;
   }
 
   * { box-sizing: border-box; }
 
+  html, body { margin: 0; background: var(--bg); }
+
   body {
-    margin: 0;
-    background: var(--page-bg);
-    color: var(--page-ink);
-    font-family: Georgia, "Iowan Old Style", serif;
-    padding: 3rem 1.5rem 4rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.75rem;
+    position: relative;
+    width: 1280px;
+    height: 640px;
+    overflow: hidden;
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "ss01", "cv11";
   }
 
-  h1 {
-    font-size: 1.3rem;
-    font-weight: 400;
-    font-style: italic;
+  /* ---- copy column ---- */
+
+  .brand {
+    position: absolute;
+    left: 64px;
+    top: 58px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .wordmark {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .version {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: var(--ink-3);
+  }
+
+  .headline {
+    position: absolute;
+    left: 62px;
+    top: 158px;
     margin: 0;
-    text-align: center;
+    width: 540px;
+    font-size: 66px;
+    font-weight: 600;
+    line-height: 1.0;
+    letter-spacing: -0.032em;
   }
 
   .sub {
-    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    font-size: 0.72rem;
-    color: var(--page-ink-soft);
-    text-align: center;
-    max-width: 480px;
-    line-height: 1.6;
-    margin: -1rem 0 0;
+    position: absolute;
+    left: 64px;
+    top: 328px;
+    margin: 0;
+    width: 440px;
+    font-size: 19px;
+    font-weight: 400;
+    line-height: 1.45;
+    color: var(--ink-2);
   }
 
-  .canvas-frame {
-    width: 100%;
-    max-width: 1000px;
-    overflow-x: auto;
-    border: 1px solid var(--page-border);
-    background: var(--card-surface);
-    padding: 1.25rem;
+  .sub strong {
+    font-weight: 500;
+    color: var(--ink);
   }
 
-  canvas#card {
-    display: block;
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1280 / 640;
-  }
-
-  .actions {
+  .foot {
+    position: absolute;
+    left: 64px;
+    bottom: 58px;
     display: flex;
     align-items: center;
-    gap: 1rem;
-    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    font-size: 0.78rem;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--ink-3);
   }
 
-  button {
-    font-family: inherit;
-    font-size: 0.78rem;
-    padding: 0.65rem 1.2rem;
-    background: var(--page-ink);
-    color: var(--page-bg);
-    border: none;
-    cursor: pointer;
+  .foot::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
   }
 
-  button:hover { background: var(--page-accent); }
+  /* ---- product fragment ---- */
 
-  button:focus-visible {
-    outline: 2px solid var(--page-accent);
-    outline-offset: 2px;
+  .grid {
+    position: absolute;
+    left: 644px;
+    top: 84px;
+    display: grid;
+    grid-template-columns: repeat(3, 252px);
+    gap: 30px 26px;
   }
 
-  .meta {
-    color: var(--page-ink-soft);
+  .card { width: 252px; opacity: 0.8; }
+  .card.selected { opacity: 1; }
+
+  .card-media {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .card.selected .card-media {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  .card-frame { aspect-ratio: 4 / 3; background: var(--surface); }
+
+  .card-frame img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .card-palette { display: flex; height: 10px; border-top: 1px solid var(--line); }
+  .card-palette span { flex: 1; }
+
+  .card-check {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--accent);
+    border: 1.5px solid var(--accent);
+  }
+
+  .card-check svg { width: 11px; height: 11px; }
+
+  .card-meta { padding: 12px 2px 0; }
+
+  .card-kicker {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+    color: var(--ink-3);
+  }
+
+  .card-kicker span:last-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-title {
+    margin: 6px 0 0;
+    font-size: 15px;
+    font-weight: 560;
+    letter-spacing: -0.012em;
+    line-height: 1.25;
+  }
+
+  .card-subtitle {
+    margin-top: 3px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* quiet the fragment's left edge so the copy sits on clean ground */
+  .fade {
+    position: absolute;
+    left: 560px;
+    top: 0;
+    width: 200px;
+    height: 640px;
+    background: linear-gradient(90deg, var(--bg) 0%, var(--bg) 22%, rgba(15, 14, 12, 0) 100%);
+    pointer-events: none;
+  }
+
+  /* hairline that reads as the index rail's edge */
+  .rule {
+    position: absolute;
+    left: 612px;
+    top: 0;
+    width: 1px;
+    height: 640px;
+    background: var(--line);
   }
 </style>
+</head>
+<body>
+  <div class="grid">
+    <article class="card">
+      <div class="card-media">
+        <div class="card-frame"><img src="../images/iridescent-swirl-orb-render.png" alt="" /></div>
+        <div class="card-palette">
+          <span style="background:#060609"></span><span style="background:#090705"></span><span style="background:#6ea18b"></span><span style="background:#c3974a"></span><span style="background:#171f18"></span><span style="background:#1d466b"></span>
+        </div>
+      </div>
+      <div class="card-meta">
+        <div class="card-kicker"><span>01</span><span>Iridescent Orb Renders</span></div>
+        <h2 class="card-title">Iridescent Swirl Orb</h2>
+        <div class="card-subtitle">glowing 3d gradient render</div>
+      </div>
+    </article>
 
-<h1>Social preview card, for GitHub / Reddit / Threads link previews</h1>
-<p class="sub">Rendered on a canvas at 2560×1280 (2x) and exported as a 1280×640 PNG, GitHub's recommended social-preview size. The swatch strip uses the actual primitive hexes pulled during this session's Claude Design run, not placeholder colors.</p>
+    <article class="card selected">
+      <div class="card-media">
+        <div class="card-frame"><img src="../images/grainy-gradient-ellipsoid-render.png" alt="" /></div>
+        <div class="card-palette">
+          <span style="background:#12110d"></span><span style="background:#222233"></span><span style="background:#b46943"></span><span style="background:#182626"></span><span style="background:#704134"></span><span style="background:#7f5b89"></span>
+        </div>
+        <div class="card-check"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.5L13 4.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="card-meta">
+        <div class="card-kicker"><span>02</span><span>Iridescent Orb Renders</span></div>
+        <h2 class="card-title">Grainy Gradient Ellipsoids</h2>
+        <div class="card-subtitle">overlapping grainy gradient forms</div>
+      </div>
+    </article>
 
-<div class="canvas-frame">
-  <canvas id="card" width="2560" height="1280"></canvas>
-</div>
+    <article class="card">
+      <div class="card-media">
+        <div class="card-frame"><img src="../images/mid-century-fish-circle-composition-orange.png" alt="" /></div>
+        <div class="card-palette">
+          <span style="background:#241f18"></span><span style="background:#e58846"></span><span style="background:#b75f2c"></span><span style="background:#dad9dd"></span><span style="background:#4e494d"></span><span style="background:#202423"></span>
+        </div>
+      </div>
+      <div class="card-meta">
+        <div class="card-kicker"><span>03</span><span>Mid-Century Modern Illustration</span></div>
+        <h2 class="card-title">Orange Circle &amp; Fish</h2>
+        <div class="card-subtitle">mid-century geometric collage</div>
+      </div>
+    </article>
 
-<div class="actions">
-  <button id="download" type="button">Download PNG</button>
-  <span class="meta" id="dims">2560 × 1280px</span>
-</div>
+    <article class="card">
+      <div class="card-media">
+        <div class="card-frame"><img src="../images/glossy-drip-creatures-orange-teal.png" alt="" /></div>
+        <div class="card-palette">
+          <span style="background:#bea788"></span><span style="background:#002215"></span><span style="background:#4d4e1a"></span><span style="background:#454c56"></span><span style="background:#d65604"></span><span style="background:#479ea3"></span>
+        </div>
+      </div>
+      <div class="card-meta">
+        <div class="card-kicker"><span>04</span><span>Glossy Drip Creature Renders</span></div>
+        <h2 class="card-title">Drip Creatures (Orange/Teal)</h2>
+        <div class="card-subtitle">glossy melting blob creatures</div>
+      </div>
+    </article>
 
-<script>
-(function () {
-  const canvas = document.getElementById("card");
-  const ctx = canvas.getContext("2d");
-  const W = canvas.width, H = canvas.height;
-  const S = W / 1280; // scale factor from design coords (1280x640) to canvas px
+    <article class="card">
+      <div class="card-media">
+        <div class="card-frame"><img src="../images/capsule-grid-mid-century-pattern.png" alt="" /></div>
+        <div class="card-palette">
+          <span style="background:#0f1013"></span><span style="background:#8e8a7c"></span><span style="background:#dfd2c9"></span><span style="background:#2e3133"></span><span style="background:#434641"></span><span style="background:#686d6a"></span>
+        </div>
+      </div>
+      <div class="card-meta">
+        <div class="card-kicker"><span>05</span><span>Mid-Century Modern Illustration</span></div>
+        <h2 class="card-title">Capsule Grid</h2>
+        <div class="card-subtitle">mid-century pill-shape pattern</div>
+      </div>
+    </article>
 
-  // deterministic PRNG so the torn edge is stable across re-renders
-  function mulberry32(seed) {
-    return function () {
-      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
-      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-  const rng = mulberry32(1337);
+    <article class="card">
+      <div class="card-media">
+        <div class="card-frame"><img src="../images/retro-mission-control-console-poster.png" alt="" /></div>
+        <div class="card-palette">
+          <span style="background:#0e1312"></span><span style="background:#cfae79"></span><span style="background:#649292"></span><span style="background:#3e3b2a"></span><span style="background:#3f4754"></span><span style="background:#745f42"></span>
+        </div>
+      </div>
+      <div class="card-meta">
+        <div class="card-kicker"><span>06</span><span>Retro-Futurist Space Poster</span></div>
+        <h2 class="card-title">Mission Control Console</h2>
+        <div class="card-subtitle">retro space-age control room</div>
+      </div>
+    </article>
+  </div>
 
-  function px(v) { return v * S; }
+  <div class="fade"></div>
+  <div class="rule"></div>
 
-  // ---- palette ----
-  const inkDeep = "#0d0f12";
-  const inkVignette = "#1a1d21";
-  const paper = "#e9ebec";
-  const paperShade = "#d7dadc";
-  const textInk = "#181b1e";
-  const textSoft = "#5c636b";
-  const accent = "#5b6f89";
-  const tape = "rgba(201, 168, 118, 0.55)";
+  <div class="brand">
+    <span class="wordmark">Tearsheet</span>
+    <span class="version">v1.0</span>
+  </div>
 
-  const swatches = [
-    { name: "ink",   hex: "#0a0908" },
-    { name: "cream", hex: "#f7f2e7" },
-    { name: "coral", hex: "#ee6548" },
-    { name: "sky",   hex: "#61c4da" },
-    { name: "navy",  hex: "#19354c" },
-    { name: "sage",  hex: "#6ea18b" },
-    { name: "gold",  hex: "#c3974a" }
-  ];
+  <h1 class="headline">Build your own visual library.</h1>
 
-  // ---- background: dark studio desk, soft vignette + grain ----
-  ctx.fillStyle = inkDeep;
-  ctx.fillRect(0, 0, W, H);
+  <p class="sub">
+    Every reference you save is read for its <strong>mood, color, type, and UI</strong>, then handed to Claude Code, Figma, or Claude Design.
+  </p>
 
-  const vg = ctx.createRadialGradient(W * 0.5, H * 0.42, H * 0.1, W * 0.5, H * 0.5, W * 0.65);
-  vg.addColorStop(0, inkVignette);
-  vg.addColorStop(1, inkDeep);
-  ctx.fillStyle = vg;
-  ctx.fillRect(0, 0, W, H);
-
-  ctx.save();
-  ctx.globalAlpha = 0.05;
-  for (let i = 0; i < 3600; i++) {
-    const gx = rng() * W, gy = rng() * H;
-    ctx.fillStyle = rng() > 0.5 ? "#ffffff" : "#000000";
-    ctx.fillRect(gx, gy, 1, 1);
-  }
-  ctx.restore();
-
-  // ---- torn paper card ----
-  const cardCx = px(640), cardCy = px(330);
-  const cardW = px(860), cardH = px(430);
-  const rot = -1.6 * (Math.PI / 180);
-  const jag = px(5); // tear amplitude
-  const step = px(14); // tear frequency
-
-  function tornRectPoints(w, h, amp, stp) {
-    const pts = [];
-    const half = { x: w / 2, y: h / 2 };
-    // top edge, left->right
-    for (let x = -half.x; x <= half.x; x += stp) pts.push([x, -half.y + (rng() - 0.5) * amp]);
-    // right edge, top->bottom
-    for (let y = -half.y; y <= half.y; y += stp) pts.push([half.x + (rng() - 0.5) * amp, y]);
-    // bottom edge, right->left
-    for (let x = half.x; x >= -half.x; x -= stp) pts.push([x, half.y + (rng() - 0.5) * amp]);
-    // left edge, bottom->top
-    for (let y = half.y; y >= -half.y; y -= stp) pts.push([-half.x + (rng() - 0.5) * amp, y]);
-    return pts;
-  }
-
-  const tornPts = tornRectPoints(cardW, cardH, jag, step);
-
-  function drawTornPath() {
-    ctx.beginPath();
-    tornPts.forEach(([x, y], i) => {
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    });
-    ctx.closePath();
-  }
-
-  // drop shadow
-  ctx.save();
-  ctx.translate(cardCx, cardCy);
-  ctx.rotate(rot);
-  ctx.shadowColor = "rgba(0,0,0,0.55)";
-  ctx.shadowBlur = px(28);
-  ctx.shadowOffsetX = px(10);
-  ctx.shadowOffsetY = px(18);
-  ctx.fillStyle = paper;
-  drawTornPath();
-  ctx.fill();
-  ctx.restore();
-
-  // paper fill + subtle shading (no shadow this pass)
-  ctx.save();
-  ctx.translate(cardCx, cardCy);
-  ctx.rotate(rot);
-  drawTornPath();
-  ctx.clip();
-
-  ctx.fillStyle = paper;
-  ctx.fillRect(-cardW, -cardH, cardW * 2, cardH * 2);
-
-  const sheen = ctx.createLinearGradient(-cardW / 2, -cardH / 2, cardW / 2, cardH / 2);
-  sheen.addColorStop(0, "rgba(255,255,255,0.35)");
-  sheen.addColorStop(0.4, "rgba(255,255,255,0)");
-  sheen.addColorStop(1, "rgba(0,0,0,0.05)");
-  ctx.fillStyle = sheen;
-  ctx.fillRect(-cardW, -cardH, cardW * 2, cardH * 2);
-
-  // fold shadow line
-  ctx.strokeStyle = paperShade;
-  ctx.lineWidth = px(1);
-  ctx.globalAlpha = 0.6;
-  ctx.beginPath();
-  ctx.moveTo(-cardW / 2, cardH * 0.14);
-  ctx.lineTo(cardW / 2, cardH * 0.14);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-
-  // ---- content (drawn inside the clipped, rotated paper space) ----
-  const left = -cardW / 2 + px(56);
-  const top = -cardH / 2 + px(54);
-  const contentW = cardW - px(112);
-
-  // eyebrow
-  ctx.fillStyle = textSoft;
-  ctx.font = `${px(15)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
-  ctx.textBaseline = "alphabetic";
-  ctx.save();
-  ctx.font = `700 ${px(13)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
-  ctx.fillText("D E S I G N   R E F E R E N C E   G A L L E R Y", left, top);
-  ctx.restore();
-
-  // wordmark
-  ctx.fillStyle = textInk;
-  ctx.font = `700 ${px(92)}px Georgia, "Iowan Old Style", serif`;
-  ctx.fillText("Tearsheet", left - px(4), top + px(112));
-
-  // tagline
-  ctx.fillStyle = "#33383d";
-  ctx.font = `italic ${px(25)}px Georgia, "Iowan Old Style", serif`;
-  ctx.fillText("Reads the mood, color, type, and UI in every reference.", left, top + px(164));
-  ctx.fillStyle = accent;
-  ctx.font = `italic ${px(25)}px Georgia, "Iowan Old Style", serif`;
-  ctx.fillText("Scaffolds it straight into Figma or Claude Design.", left, top + px(200));
-
-  // swatch strip (color-proof bar), bleeding toward the torn bottom edge
-  const stripY = cardH / 2 - px(88);
-  const gap = px(14);
-  const chip = (contentW - gap * (swatches.length - 1)) / swatches.length;
-  const chipH = px(64);
-
-  swatches.forEach((sw, i) => {
-    const x = left + i * (chip + gap);
-    ctx.fillStyle = sw.hex;
-    ctx.fillRect(x, stripY, chip, chipH);
-    ctx.strokeStyle = "rgba(0,0,0,0.12)";
-    ctx.lineWidth = px(1);
-    ctx.strokeRect(x + 0.5, stripY + 0.5, chip, chipH);
-
-    ctx.fillStyle = textSoft;
-    ctx.font = `${px(12)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
-    ctx.fillText(sw.hex, x, stripY + chipH + px(22));
-  });
-
-  ctx.restore(); // end clip
-
-  // kraft tape pinning the top of the sheet
-  ctx.save();
-  ctx.translate(cardCx - cardW * 0.28, cardCy - cardH / 2);
-  ctx.rotate(rot + (-6 * Math.PI) / 180);
-  ctx.fillStyle = tape;
-  ctx.fillRect(-px(70), -px(18), px(140), px(36));
-  ctx.restore();
-
-  ctx.save();
-  ctx.translate(cardCx + cardW * 0.22, cardCy - cardH / 2);
-  ctx.rotate(rot + (4 * Math.PI) / 180);
-  ctx.fillStyle = tape;
-  ctx.fillRect(-px(60), -px(16), px(120), px(32));
-  ctx.restore();
-
-  // corner credit, outside the paper
-  ctx.fillStyle = "rgba(229,231,234,0.55)";
-  ctx.font = `${px(15)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
-  ctx.textAlign = "right";
-  ctx.fillText("github.com/jeanpaulbondy-la/tearsheet", W - px(48), H - px(40));
-  ctx.textAlign = "left";
-
-  // ---- download ----
-  document.getElementById("download").addEventListener("click", function () {
-    const link = document.createElement("a");
-    link.download = "tearsheet-og-card.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  });
-})();
-</script>
+  <div class="foot">github.com/jeanpaulbondy-la/tearsheet</div>
+</body>
+</html>
