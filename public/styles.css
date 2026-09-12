@@ -470,7 +470,7 @@ a {
 }
 
 .card-surface {
-  opacity: 0.8;
+  opacity: 1;
   transition: opacity 0.2s var(--ease);
 }
 
@@ -490,7 +490,7 @@ a {
     transform: translateY(10px);
   }
   to {
-    opacity: 0.8;
+    opacity: 1;
     transform: translateY(0);
   }
 }
