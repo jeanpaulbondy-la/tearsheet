@@ -500,7 +500,7 @@ async function submitFigmaUrl() {
 
   const selectedItems = items.filter((item) => selected.has(item.id));
   saveFigmaBtn.disabled = true;
-  saveFigmaBtn.textContent = "Connecting…";
+  saveFigmaBtn.textContent = "Building Figma file…";
 
   try {
     const res = await fetch("/api/selection", {
@@ -512,19 +512,23 @@ async function submitFigmaUrl() {
       }),
     });
     const data = await res.json();
-    if (data.ok) {
-      showProcessingModal();
-      saveFigmaBtn.textContent = "Sent to Figma";
+    if (data.ok && data.figmaUrl) {
+      saveFigmaBtn.textContent = "✓ Figma file created";
+      setTimeout(() => {
+        window.open(data.figmaUrl, "_blank");
+      }, 500);
     } else {
       saveFigmaBtn.textContent = "Failed";
+      console.error(data.error, data.details);
     }
   } catch (err) {
     saveFigmaBtn.textContent = "Failed";
+    console.error(err);
   } finally {
     setTimeout(() => {
       saveFigmaBtn.disabled = false;
       saveFigmaBtn.textContent = "Save for Figma";
-    }, 2000);
+    }, 3000);
   }
 }
 

@@ -1,5 +1,6 @@
 node_modules/
 .DS_Store
+.env
 
 # Social post assets (clip, stills), kept out of the repo
 assets/social/

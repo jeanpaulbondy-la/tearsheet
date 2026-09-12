@@ -12,16 +12,17 @@ Everything stays local. Nothing is uploaded anywhere unless you explicitly push 
 
 ```bash
 git clone https://github.com/jeanpaulbondy-la/tearsheet.git
+cd tearsheet
+npm install && npm run setup
 ```
 
-```bash
-cd tearsheet && npm install && npm run setup
-```
+**Then set up Figma integration:**
 
-`npm run setup` does two things:
+1. Get your Anthropic API key from [console.anthropic.com](https://console.anthropic.com)
+2. Copy `.env.example` to `.env`
+3. Add your key: `ANTHROPIC_API_KEY=sk-ant-...`
 
-- Installs the global commands (`/use-tearsheet`, `/tearsheet-to-figma`, `/tearsheet-to-design`) into `~/.claude/skills/`. Restart Claude Code once so it picks them up.
-- On macOS, builds **Tearsheet.app** in the project folder. Drag it onto the Dock; clicking it starts the server if needed and opens the gallery. The first launch may ask you to confirm opening an app from an unidentified developer (right-click, Open).
+`npm run setup` installs the global Claude Code commands (`/use-tearsheet`, `/tearsheet-to-figma`, `/tearsheet-to-design`) into `~/.claude/skills/`. On macOS, it also builds **Tearsheet.app** — drag it onto the Dock to start the server and open the gallery from your menu bar.
 
 <p>
   <img src="assets/readme/icon-128.png" alt="Tearsheet app icon" width="64" align="left" />
@@ -59,9 +60,9 @@ Click any image to open it full size with its description, the extracted palette
 
 **Or turn a selection into a design-tool starter kit**
 
-Same selection step, then in Claude Code run `/tearsheet-to-figma` (new Figma file) or `/tearsheet-to-design` (new claude.ai/design project). The skill automatically finds your saved selection, builds color tokens and type styles from the extracted palettes, and creates a small starter kit of UI components if any images look like real interfaces.
+Same selection step, then click "Build File" in Tearsheet. It creates a Figma file with color tokens, type styles, and UI components — all automatically, using your Anthropic API key.
 
-### The complete workflow (end-to-end)
+### The complete workflow
 
 ```
 1. Drop images into inbox/
@@ -70,20 +71,18 @@ Same selection step, then in Claude Code run `/tearsheet-to-figma` (new Figma fi
    ↓
 3. Browse at http://localhost:4560
    ↓
-4. Select images → "Save for Figma"
+4. Select images → "Save for Figma" (optional: include your Figma project link for reference)
    ↓
-5. Run /tearsheet-to-figma in Claude Code
+5. Click "Build File"
    ↓
-6. One approval gate → Figma file ready in seconds
+6. Figma file appears in seconds (browser opens it automatically)
 ```
 
-**Why this is frictionless:**
-- Selection is automatic (no "use this or start fresh?" prompts)
-- Figma team is cached (no "which team?" questions unless ambiguous)
-- One comprehensive operation (not 31 separate API calls = not 31 approval gates)
-- Result: your design tokens + components in Figma, seconds after hitting enter
+**One-click frictionless:** Selection → Build → Done. No extra steps, no skill invocation, no approval gates. Claude builds the entire file server-side using the Figma API.
 
-See `skills/tearsheet-to-figma/SKILL.md` for implementation details.
+**Alternatively**, in Claude Code run `/tearsheet-to-figma` or `/tearsheet-to-design` for more control over the build (manual skill invocation gives you prompts and options).
+
+See `skills/tearsheet-to-figma/SKILL.md` for build details.
 
 ## Structure
 
