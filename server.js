@@ -2,6 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const { execSync } = require("child_process");
 
 const app = express();
 const PORT = process.env.PORT || 4560;
@@ -23,6 +24,7 @@ app.use("/data", express.static(path.join(ROOT, "data")));
 
 app.post("/api/selection", (req, res) => {
   const images = Array.isArray(req.body.images) ? req.body.images : [];
+  const figmaUrl = req.body.figmaUrl || null;
 
   if (images.length === 0) {
     return res.status(400).json({ error: "No images provided" });
@@ -31,6 +33,7 @@ app.post("/api/selection", (req, res) => {
   const payload = {
     savedAt: new Date().toISOString(),
     sourceGallery: ROOT,
+    figmaUrl: figmaUrl,
     images: images.map((item) => ({
       id: item.id,
       path: path.join(IMAGES_DIR, item.filename),
@@ -45,8 +48,15 @@ app.post("/api/selection", (req, res) => {
 
   fs.mkdirSync(path.dirname(SELECTION_FILE), { recursive: true });
   fs.writeFileSync(SELECTION_FILE, JSON.stringify(payload, null, 2));
+  console.log("Saved selection to:", SELECTION_FILE);
+  console.log("Figma URL saved:", figmaUrl);
 
-  res.json({ ok: true, savedTo: SELECTION_FILE, count: payload.images.length });
+  res.json({
+    ok: true,
+    savedTo: SELECTION_FILE,
+    count: payload.images.length,
+    message: "Selection saved. Run '/tearsheet-to-figma' in Claude Code to create the Figma file."
+  });
 });
 
 app.listen(PORT, () => {

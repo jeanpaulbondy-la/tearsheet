@@ -12,7 +12,8 @@ const clearFiltersBtn2 = document.getElementById("clear-filters-2");
 const selectionBar = document.getElementById("selection-bar");
 const selectionCountEl = document.getElementById("selection-count");
 const clearBtn = document.getElementById("clear-selection");
-const saveBtn = document.getElementById("save-selection");
+const saveFigmaBtn = document.getElementById("save-for-figma");
+const saveClaudeBtn = document.getElementById("save-for-claude");
 const indexToggle = document.getElementById("index-toggle");
 const lightboxEl = document.getElementById("lightbox");
 const lightboxFrameEl = lightboxEl.querySelector(".lightbox-frame");
@@ -473,10 +474,83 @@ async function loadGallery() {
   openFromHash();
 }
 
-async function saveSelection() {
+function showFigmaModal() {
+  const modal = document.getElementById("figma-modal");
+  const input = document.getElementById("figma-url-input");
+  modal.hidden = false;
+  input.focus();
+  input.value = "";
+}
+
+function closeFigmaModal() {
+  const modal = document.getElementById("figma-modal");
+  modal.hidden = true;
+}
+
+async function submitFigmaUrl() {
+  const input = document.getElementById("figma-url-input");
+  const figmaUrl = input.value.trim();
+
+  if (!figmaUrl) {
+    alert("Please enter a Figma URL");
+    return;
+  }
+
+  closeFigmaModal();
+
   const selectedItems = items.filter((item) => selected.has(item.id));
-  saveBtn.disabled = true;
-  saveBtn.textContent = "Saving…";
+  saveFigmaBtn.disabled = true;
+  saveFigmaBtn.textContent = "Connecting…";
+
+  try {
+    const res = await fetch("/api/selection", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        images: selectedItems,
+        figmaUrl: figmaUrl
+      }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showProcessingModal();
+      saveFigmaBtn.textContent = "Sent to Figma";
+    } else {
+      saveFigmaBtn.textContent = "Failed";
+    }
+  } catch (err) {
+    saveFigmaBtn.textContent = "Failed";
+  } finally {
+    setTimeout(() => {
+      saveFigmaBtn.disabled = false;
+      saveFigmaBtn.textContent = "Save for Figma";
+    }, 2000);
+  }
+}
+
+function showProcessingModal() {
+  const processingModal = document.getElementById("figma-processing-modal");
+  processingModal.hidden = false;
+
+  // Auto-close after 5 minutes (300 seconds)
+  setTimeout(() => {
+    closeProcessingModal();
+  }, 300000);
+}
+
+function closeProcessingModal() {
+  const processingModal = document.getElementById("figma-processing-modal");
+  processingModal.hidden = true;
+}
+
+function saveForFigma() {
+  showFigmaModal();
+}
+
+async function saveForClaude() {
+  const selectedItems = items.filter((item) => selected.has(item.id));
+  saveClaudeBtn.disabled = true;
+  saveClaudeBtn.textContent = "Saving…";
   try {
     const res = await fetch("/api/selection", {
       method: "POST",
@@ -484,13 +558,13 @@ async function saveSelection() {
       body: JSON.stringify({ images: selectedItems }),
     });
     const data = await res.json();
-    saveBtn.textContent = data.ok ? "Saved" : "Failed";
+    saveClaudeBtn.textContent = data.ok ? "Saved" : "Failed";
   } catch (err) {
-    saveBtn.textContent = "Failed";
+    saveClaudeBtn.textContent = "Failed";
   } finally {
     setTimeout(() => {
-      saveBtn.disabled = false;
-      saveBtn.textContent = "Save for Claude Code";
+      saveClaudeBtn.disabled = false;
+      saveClaudeBtn.textContent = "Save for Claude Code";
     }, 1500);
   }
 }
@@ -519,8 +593,24 @@ clearBtn.addEventListener("click", () => {
   updateSelectionBar();
   if (!lightboxEl.hidden) renderDetailActions();
 });
-saveBtn.addEventListener("click", saveSelection);
+saveFigmaBtn.addEventListener("click", saveForFigma);
+saveClaudeBtn.addEventListener("click", saveForClaude);
 indexToggle.addEventListener("click", toggleIndexDrawer);
+
+const figmaModal = document.getElementById("figma-modal");
+const figmaCancelBtn = document.getElementById("figma-cancel");
+const figmaSubmitBtn = document.getElementById("figma-submit");
+const figmaUrlInput = document.getElementById("figma-url-input");
+
+figmaCancelBtn.addEventListener("click", closeFigmaModal);
+figmaSubmitBtn.addEventListener("click", submitFigmaUrl);
+figmaUrlInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") submitFigmaUrl();
+  if (e.key === "Escape") closeFigmaModal();
+});
+figmaModal.addEventListener("click", (e) => {
+  if (e.target === figmaModal) closeFigmaModal();
+});
 
 lightboxCloseBtn.addEventListener("click", closeDetail);
 detailPrev.addEventListener("click", () => stepDetail(-1));

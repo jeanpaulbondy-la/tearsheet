@@ -72,7 +72,8 @@
     <span id="selection-count" class="tray-count">0 selected</span>
     <div class="tray-actions">
       <button id="clear-selection" type="button" class="btn-ghost">Clear</button>
-      <button id="save-selection" type="button" class="btn-primary">Save for Claude Code</button>
+      <button id="save-for-figma" type="button" class="btn-primary">Save for Figma</button>
+      <button id="save-for-claude" type="button" class="btn-ghost">Save for Claude Code</button>
     </div>
   </div>
 
@@ -90,6 +91,19 @@
       <div class="lightbox-frame"></div>
     </div>
     <aside id="detail-panel" class="detail-panel"></aside>
+  </div>
+
+  <div id="figma-modal" class="modal-overlay" hidden>
+    <div class="modal-dialog">
+      <h2>Save Selection</h2>
+      <p>Ready to send to Figma? Run this in Claude Code:</p>
+      <code style="display: block; padding: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; margin: 16px 0; font-family: var(--mono); font-size: 13px;">/tearsheet-to-figma</code>
+      <p style="font-size: 13px; color: var(--ink-2);">You'll be asked for your Figma project URL, then the integration runs.</p>
+      <div class="modal-actions">
+        <button id="figma-cancel" type="button" class="btn-ghost">Cancel</button>
+        <button id="figma-submit" type="button" class="btn-primary">Save & Close</button>
+      </div>
+    </div>
   </div>
 
   <script src="/app.js"></script>

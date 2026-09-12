@@ -1127,6 +1127,112 @@ a {
   }
 }
 
+/* ---- modal ---- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-dialog {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 32px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: var(--shadow);
+}
+
+.modal-dialog h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.modal-dialog p {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.modal-dialog input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+}
+
+.modal-dialog input::placeholder {
+  color: var(--ink-3);
+}
+
+.modal-dialog input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.processing-dialog {
+  text-align: center;
+}
+
+.figma-icon {
+  margin: 0 auto 20px;
+  display: block;
+  opacity: 0.8;
+}
+
+.figma-part-1, .figma-part-2, .figma-part-3, .figma-part-4, .figma-part-5 {
+  fill: var(--accent);
+  transform-origin: 12px 12px;
+  animation: figma-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.figma-part-1 { animation-delay: 0s; }
+.figma-part-2 { animation-delay: 0.2s; }
+.figma-part-3 { animation-delay: 0.4s; }
+.figma-part-4 { animation-delay: 0.6s; }
+.figma-part-5 { animation-delay: 0.8s; }
+
+@keyframes figma-pulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.processing-dialog h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.processing-note {
+  font-size: 13px;
+  color: var(--ink-2);
+  margin: 16px 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
