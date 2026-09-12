@@ -59,19 +59,31 @@ Click any image to open it full size with its description, the extracted palette
 
 **Or turn a selection into a design-tool starter kit**
 
-Same selection step, then in Claude Code run `/tearsheet-to-figma` (new Figma file with variables, type styles, and components) or `/tearsheet-to-design` (new claude.ai/design project). The skill automatically finds your saved selection and builds design tokens from the palettes already extracted from each image.
+Same selection step, then in Claude Code run `/tearsheet-to-figma` (new Figma file) or `/tearsheet-to-design` (new claude.ai/design project). The skill automatically finds your saved selection, builds color tokens and type styles from the extracted palettes, and creates a small starter kit of UI components if any images look like real interfaces.
 
-**The full workflow:**
+### The complete workflow (end-to-end)
 
-1. Drop images into `inbox/`
-2. Run `/process-inbox` in Claude Code (indexes and extracts color palettes)
-3. Browse at http://localhost:4560 and select images
-4. Click "Save for Figma" in the gallery
-5. In Claude Code, run `/tearsheet-to-figma` to build the Figma file
+```
+1. Drop images into inbox/
+   ↓
+2. Run /process-inbox (indexes + extracts palettes)
+   ↓
+3. Browse at http://localhost:4560
+   ↓
+4. Select images → "Save for Figma"
+   ↓
+5. Run /tearsheet-to-figma in Claude Code
+   ↓
+6. One approval gate → Figma file ready in seconds
+```
 
-That's it. No clicking around between apps; the skill auto-detects your selection and walks you through building the starter kit.
+**Why this is frictionless:**
+- Selection is automatic (no "use this or start fresh?" prompts)
+- Figma team is cached (no "which team?" questions unless ambiguous)
+- One comprehensive operation (not 31 separate API calls = not 31 approval gates)
+- Result: your design tokens + components in Figma, seconds after hitting enter
 
-See `skills/tearsheet-to-figma/SKILL.md` or `skills/tearsheet-to-design/SKILL.md` for details on the build process and how to request the full design-system treatment instead of the starter-kit default.
+See `skills/tearsheet-to-figma/SKILL.md` for implementation details.
 
 ## Structure
 
