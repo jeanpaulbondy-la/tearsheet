@@ -74,31 +74,33 @@ Propose a semantic layer for the roles that map to a stable single hue: `color/b
 
 Load the `figma-use` skill. Then make **one single `use_figma` call** with a script that builds the entire starter kit. This is one approval gate, one mutation operation. Structure the script in three phases:
 
-### The Script Structure
+### The Script: ONE use_figma() Call
+
+Write **one single script** that does everything. Do not make multiple use_figma calls. Structure it:
 
 ```javascript
-// Phase 1: Setup — Create structure + variables + styles
-// - Create Cover, Foundations, References, Components pages (dividers as needed)
-// - Set page backgrounds (dark theme default)
-// - Create all primitive variables (4a colors)
-// - Create all semantic variables (aliased to primitives)
-// - Create all text styles (4b)
+// PHASE 1: Setup (pages + variables + styles)
+// Create 4 pages: Cover, Foundations, References, Components
+// Set all page backgrounds to dark bg color (unbound, flat)
+// Create ALL primitive variables (6-8 colors from pooled palettes)
+// Create ALL semantic variables (color/bg/primary, color/text/primary, etc., aliased to primitives)
+// Create ALL text styles (Heading, Body, Mono from 4b)
 
-// Phase 2: References — Upload images
-// - Call figma.fileKey and figma.currentPage (already set by figma-use)
-// - upload_assets() for all selected images with captions
-// - Place each image on References page with its caption
+// PHASE 2: References (images)
+// Switch to References page
+// For each image: add to page, place with caption (what it contributed)
 
-// Phase 3: Components — Build UI elements (if any from 4c)
-// - Switch to Components page
-// - For each component in the capped list (max 5):
-//   - Create frame with component name
-//   - Add children (button, card, input, etc.) using variables from Foundation
-//   - Apply text styles from Foundation
-// - No per-component screenshot; just build all
+// PHASE 3: Components (UI elements)
+// Switch to Components page
+// For each component type in capped list (max 5):
+//   Create frame
+//   Add children using variables + text styles from Phase 1
+//   (No screenshot between components—just build all)
 
-// Final screenshot at the end showing Cover → Foundations → References → Components
+// FINAL: One screenshot of the complete file (Cover → Foundations → References → Components)
 ```
+
+**Critical:** All phases are in ONE script. No calling use_figma multiple times. This keeps tool invocations low (one approval gate, not 31).
 
 **Key points:**
 - One `use_figma` call, one approval
