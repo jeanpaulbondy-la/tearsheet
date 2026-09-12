@@ -45,7 +45,7 @@ If **zero** images classify as UI sources: say so plainly, and only do Step 4a (
 
 ## Step 4 — Derive design intent
 
-**4a. Color** — Pool the `palette` array from every selected image (UI and mood sources both count). Dedupe near-duplicate hexes down to a reasonable primitive set (typically 4–8 base colors). Create each as a single Figma primitive variable named `primitive/<natural-color-name>` (e.g. `primitive/coral`, `primitive/seafoam` — **not** `primitive/coral/500`; there's no step suffix, see below for why). **The name must be something a designer or developer would actually say out loud** — a real color/mood word (coral, seafoam, rust, dusk, ink, sand, acid, slate), never a placeholder like "color1," "accent-orange," or the raw hex. Pick it by looking at the swatch, not by category.
+**4a. Color** — Pool the `palette` array from every selected image (UI and mood sources both count). Dedupe near-duplicate hexes down to a reasonable primitive set (typically 4–8 base colors). You'll create each as a single Figma primitive variable named `primitive/<natural-color-name>` (e.g. `primitive/coral`, `primitive/seafoam`). **The name must be something a designer or developer would actually say out loud** — a real color/mood word (coral, seafoam, rust, dusk, ink, sand, acid, slate), never a placeholder like "color1," "accent-orange," or the raw hex. Pick it by looking at the swatch, not by category.
 
 **Tints are opacity variants, not mixed-toward-white/black hexes.** Earlier versions of this skill generated a 50–900 lighten/darken ramp per color as separate bindable variables — don't do that. Instead, "Coral at 60%" is literally `primitive/coral` rendered at 60% opacity, the same way `text-white/60` works in Tailwind. This is simpler and reads better to designers, but it comes with one hard Figma constraint, discovered by testing this exact thing:
 
@@ -72,21 +72,19 @@ Propose a semantic layer for the roles that map to a stable single hue: `color/b
 
 ## Step 5 — Build the file
 
-Load the `figma-use` skill before any `use_figma` call (mandatory), and the `figma-generate-library` skill for any component work (mandatory per that skill's own trigger — even one component needs proper variable foundations). Follow `figma-generate-library`'s phase discipline, scoped down to what Step 4 locked in:
+Load the `figma-use` skill, then make **one comprehensive `use_figma` call** that builds the entire starter kit in a single script. This consolidates all Figma mutations into one approval gate, not 31 separate ones.
 
-- **Skip Phase 0** discovery mechanics (this is a blank new file) — instead print a short scope summary: what's UI-sourced vs mood-sourced, and what's in v1 vs deliberately left out.
-- **Phase 1 Foundations**: create the primitive + semantic color variables from 4a and the text styles from 4b. Explicit scopes on every variable, never `ALL_SCOPES`. Alias semantic to primitive, never duplicate raw values.
-- **Page styling — apply to every page you create, no exceptions:** right after creating or switching to a page, set `page.backgrounds` to a flat `SOLID` paint matching the semantic bg token's resolved color from 4a (`color/bg/primary` for most pages; `color/bg/surface` is fine for a page that wants to read as a raised panel) — never leave a page on Figma's default white. **Page backgrounds cannot be bound to a variable** (`figma.variables.setBoundVariableForPaint` throws `"page backgrounds cannot be bound to variables"` if you try) — resolve the token to its hex/RGB value yourself and set that directly; this is the one place in the file where an unbound flat color is correct, not a shortcut to avoid. Do this for Cover, References, Foundations, Components, and any other page you add, not just the ones that visually seem to need a dark backdrop. Any text placed directly on a page — titles, section headers, References captions — must use one of the text styles from 4b, properly applied via `node.setTextStyleIdAsync(styleId)` (not just matching font/size by hand) so edits to the style cascade — never Figma's default Inter/Regular that new text nodes start with.
+**One script, three phases:**
 
-  **Because page backgrounds are flat and unbound, they do NOT update if you later change what a semantic token resolves to.** If you redefine `color/bg/primary` partway through a build (e.g. switching the whole file to a dark theme after already creating pages), you must go back and explicitly re-set every page's flat background to match — aliasing the variable is not enough, since nothing is bound to it. Do this as its own dedicated pass across all pages before your final screenshot check, not something you assume propagated.
+1. **Setup (Cover + Foundations)**: Create the file structure. Build all primitives and semantic variables from 4a. Build all text styles from 4b. Set page backgrounds and styling. No validation loop—trust the structure.
 
-  **Re-set `figma.currentPage` at the top of every single script, not just the first one.** Page context resets to the first page at the start of *every* `use_figma` call (see `figma-use`'s Page Rules) — if you build Foundations, then in a later call forget to call `setCurrentPageAsync(foundations)` again before creating nodes, those nodes silently land on whichever page is first (usually Cover) instead. This is easy to do when a build stretches across many calls; if something looks visually correct on the wrong page later, this is the first thing to check.
-- **Phase 2 File structure**: minimal skeleton — Cover → Foundations → `---` → Components (only if 4c is non-empty).
-- **References page** (build this first, right after Cover): upload the actual selected source images via `upload_assets` with a short caption per image noting what it contributed (palette / typography / which component) — keeps the file traceable back to the moodboard instead of showing bare tokens.
-- **Phase 3 Components**: build only the capped list from 4c, one at a time, with the checklist/validate/screenshot discipline `figma-generate-library` requires. Skip entirely if 4c is empty.
-- **Skip Phase 4's full QA audit** for starter-kit scope (no variant matrices or dark mode to audit) — do a quick final screenshot pass instead.
+2. **References page**: Upload the selected source images via `upload_assets` with a short caption per image (what it contributed: palette/typography/component). Keeps the file traceable to the moodboard.
 
-**If the user explicitly asks for the full treatment** (e.g. "build the full design system," "don't cap it"), run the complete `figma-generate-library` Phase 0–4 process instead of the capped version above — variant matrices, light/dark modes, accessibility audit, the works. Confirm this is what they want before starting, since it's a much longer run.
+3. **Components page** (if 4c is non-empty): Build the capped list from 4c. Each component uses the variables + text styles from Foundations. No per-component screenshot validation—build all, then one final screenshot at the end.
+
+**One screenshot at the end** (not 15 during build) showing the complete file: Cover → Foundations → References → Components. This validates the whole thing without multiplication.
+
+**If the user explicitly asks for more** (e.g. "build the full design system," "add dark mode," "don't cap it"), note that this requires more tool volume and ask if they want that explicit trade-off. Confirm before starting, since it's different scope.
 
 ## Step 6 — Report results
 
@@ -96,4 +94,5 @@ Give the user: the new Figma file URL, a short breakdown of which source image c
 
 - `path` values in the selection file are absolute — use them as-is.
 - If an image path no longer exists, mention it and skip it rather than failing the whole run.
-- Never skip straight to component creation without the color/type foundations from Step 4 existing first — `figma-generate-library` treats that as a hard error, not a shortcut.
+- This skill uses **direct Figma API calls** (via `use_figma`), not secondary skills like `figma-generate-library`. This keeps tool invocations minimal (one large script instead of 31 small ones) and maintains frictionless UX (one permission gate, not many).
+- One final screenshot at the end (not per-component validation) proves the file built correctly.
