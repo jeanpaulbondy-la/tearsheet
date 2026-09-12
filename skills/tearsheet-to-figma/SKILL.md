@@ -15,7 +15,7 @@ This is heavier than `/use-tearsheet`: it needs Figma auth and makes many tool c
 
 When this skill is invoked, immediately check `~/.claude/tearsheet-selection.json`.
 
-- **If the file exists and contains a non-empty `images` array:** Offer to use this saved selection — "I found a saved Tearsheet selection with N images. Use this selection, or start fresh?" If the user confirms, use the saved selection and proceed to Step 2. If they decline, proceed to Step 1 normally.
+- **If the file exists and contains a non-empty `images` array:** Use this saved selection and proceed directly to Step 2. The user ran the skill specifically to build from this selection—no permission needed. Print "Found N images. Building the Figma starter kit."
 - **If the file is missing or empty:** Proceed to Step 1 normally.
 
 ## Step 1 — Read the selection
@@ -37,10 +37,10 @@ If **zero** images classify as UI sources: say so plainly, and only do Step 4a (
 
 ## Step 3 — Resolve the Figma target
 
-1. If the saved selection contains a `figmaUrl`, acknowledge it to the user: "I'll create this starter kit in your default team. (Your selection was saved for <figmaUrl>.)"
-2. Check `~/.claude/tearsheet-figma-plan.json` for a cached `{ planKey, planName }`. If present, use it and skip to 3.4.
-3. Otherwise call `whoami`. If the user has exactly one plan, use it. If multiple, ask the user which team/org to use. Either way, write the choice to `~/.claude/tearsheet-figma-plan.json` as `{ "planKey": "...", "planName": "...", "savedAt": "<ISO timestamp>" }` and tell the user it's been remembered for next time.
-4. Ask the user for a Figma file name, offering a default derived from the shared theme of the selected images (e.g. their common `category`, or "Tearsheet Starter Kit — <date>" if the selection is mixed).
+1. Check `~/.claude/tearsheet-figma-plan.json` for a cached `{ planKey, planName }`. If present, use it and proceed to 3.4. Print "Using team: <planName>."
+2. Otherwise call `whoami`. If the user has exactly one plan, use it automatically. If multiple, ask which one (this is the ONLY ask in this step—there's genuine ambiguity). Write the choice to `~/.claude/tearsheet-figma-plan.json` as `{ "planKey": "...", "planName": "...", "savedAt": "<ISO timestamp>" }` and proceed to 3.4.
+3. If the saved selection contains a `figmaUrl`, note it: "Creating in: <planName>. (Your selection was for <figmaUrl>.)"
+4. Derive a Figma file name from the shared theme of the selected images (e.g. their common `category`, or "Tearsheet Starter Kit — <date>" if mixed). Don't ask the user—proceed with this default unless they interrupt before the file is created.
 5. Call `create_new_file` with `editorType: "design"`, the resolved `planKey`, and the chosen file name. Keep the returned `fileKey` for every subsequent `use_figma`/`upload_assets` call.
 
 ## Step 4 — Derive design intent
