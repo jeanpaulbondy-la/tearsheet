@@ -74,33 +74,186 @@ Propose a semantic layer for the roles that map to a stable single hue: `color/b
 
 Load the `figma-use` skill. Then make **one single `use_figma` call** with a script that builds the entire starter kit. This is one approval gate, one mutation operation. Structure the script in three phases:
 
-### The Script: ONE use_figma() Call
+### The Script: ONE use_figma() Call (Complete Implementation)
 
-Write **one single script** that does everything. Do not make multiple use_figma calls. Structure it:
+Write **one single script** that does everything. Do not make multiple use_figma calls.
 
 ```javascript
-// PHASE 1: Setup (pages + variables + styles)
-// Create 4 pages: Cover, Foundations, References, Components
-// Set all page backgrounds to dark bg color (unbound, flat)
-// Create ALL primitive variables (6-8 colors from pooled palettes)
-// Create ALL semantic variables (color/bg/primary, color/text/primary, etc., aliased to primitives)
-// Create ALL text styles (Heading, Body, Mono from 4b)
+// PHASE 1: Setup — Pages, variables, text styles
+// ===============================================
 
-// PHASE 2: References (images)
-// Switch to References page
-// For each image: add to page, place with caption (what it contributed)
+// 1. Create 4 pages
+const cover = figma.root.appendChild(figma.createPage());
+cover.name = "Cover";
+const foundations = figma.root.appendChild(figma.createPage());
+foundations.name = "Foundations";
+const references = figma.root.appendChild(figma.createPage());
+references.name = "References";
+const components = figma.root.appendChild(figma.createPage());
+components.name = "Components";
 
-// PHASE 3: Components (UI elements)
-// Switch to Components page
-// For each component type in capped list (max 5):
-//   Create frame
-//   Add children using variables + text styles from Phase 1
-//   (No screenshot between components—just build all)
+// 2. Set page backgrounds (dark theme, from deduced palette)
+const bgColor = <resolved hex from 4a>; // e.g., #0a0e27
+[cover, foundations, references, components].forEach(page => {
+  page.backgrounds = [{
+    type: "SOLID",
+    color: hexToRgb(bgColor),
+    opacity: 1
+  }];
+});
 
-// FINAL: One screenshot of the complete file (Cover → Foundations → References → Components)
+// 3. Create primitive color variables (6-8 base colors from 4a)
+const primitives = {};
+const baseColors = <deduped hexes from pooled palettes>;
+baseColors.forEach((hex, idx) => {
+  const colorName = <natural-name: coral, seafoam, rust, etc.>;
+  const variable = figma.variables.createVariable(
+    `primitive/${colorName}`,
+    figma.libraryName,
+    "COLOR"
+  );
+  variable.setValueForMode(figma.variables.getLocalLibraryDefaultMode(), hexToRgb(hex));
+  primitives[colorName] = variable;
+});
+
+// 4. Create semantic color variables (aliased to primitives)
+const semanticVars = {};
+const semanticMappings = {
+  "color/bg/primary": primitives.ink,
+  "color/bg/surface": primitives.slate,
+  "color/text/primary": primitives.cream,
+  "color/text/secondary": primitives.cream, // (will apply opacity at use-site)
+  "color/accent/primary": primitives.cyan,
+  "color/accent/secondary": primitives.magenta,
+  "color/text/on-accent": primitives.ink
+};
+
+Object.entries(semanticMappings).forEach(([path, primitiveVar]) => {
+  const variable = figma.variables.createVariable(path, figma.libraryName, "COLOR");
+  variable.setValueForMode(figma.variables.getLocalLibraryDefaultMode(), {
+    type: "VARIABLE_ALIAS",
+    id: primitiveVar.id
+  });
+  semanticVars[path] = variable;
+});
+
+// 5. Create text styles (3 roles: Heading, Body, Mono from 4b)
+// Use listAvailableFontsAsync to resolve exact font names
+await figma.loadAllPagesAsync();
+const headingStyle = figma.createTextStyle();
+headingStyle.name = "Heading/Sans (approx. <font-name>)";
+headingStyle.fontSize = 32;
+headingStyle.fontName = { family: "Inter", style: "Bold" }; // or actual resolved font
+
+const bodyStyle = figma.createTextStyle();
+bodyStyle.name = "Body/Sans (approx. <font-name>)";
+bodyStyle.fontSize = 16;
+bodyStyle.fontName = { family: "Inter", style: "Regular" };
+
+const monoStyle = figma.createTextStyle();
+monoStyle.name = "Mono/Monospace (approx. <font-name>)";
+monoStyle.fontSize = 12;
+monoStyle.fontName = { family: "SF Mono", style: "Regular" };
+
+// PHASE 2: References — Add images with captions
+// ================================================
+
+figma.currentPage = references;
+
+// For each selected image:
+// - Place image on page
+// - Add caption text node (what it contributed: palette/typography/component)
+selectedImages.forEach(img => {
+  const imageFrame = figma.createFrame();
+  imageFrame.name = `Reference: ${img.title}`;
+  imageFrame.resizeWithoutConstraints(300, 200);
+  
+  // Place image (assuming you can fetch it as bytes)
+  const imageNode = imageFrame.appendChild(figma.createImage(imageBytes));
+  
+  // Add caption
+  const captionText = figma.createText();
+  captionText.characters = `${img.title}\n${img.contribution}`; // e.g., "Engine Console\nUI source - colors, dashboard patterns"
+  captionText.setTextStyleIdAsync(bodyStyle.id);
+  captionText.fontSize = 12;
+  imageFrame.appendChild(captionText);
+});
+
+// PHASE 3: Components — Build UI elements (if any UI sources)
+// ===========================================================
+
+figma.currentPage = components;
+
+// For each component type in capped list (max 5: button, card, input, badge, etc.):
+
+// Button
+const buttonComponent = figma.createComponent();
+buttonComponent.name = "Button";
+buttonComponent.resizeWithoutConstraints(120, 44);
+const buttonBg = buttonComponent.appendChild(figma.createRectangle());
+buttonBg.fills = [{
+  type: "SOLID",
+  color: semanticVars["color/accent/primary"].resolvedValue // or bound variable
+}];
+const buttonText = buttonComponent.appendChild(figma.createText());
+buttonText.characters = "Click me";
+buttonText.setTextStyleIdAsync(bodyStyle.id);
+
+// Card
+const cardComponent = figma.createComponent();
+cardComponent.name = "Card";
+cardComponent.resizeWithoutConstraints(300, 400);
+const cardBg = cardComponent.appendChild(figma.createRectangle());
+cardBg.fills = [{
+  type: "SOLID",
+  color: semanticVars["color/bg/surface"].resolvedValue
+}];
+cardBg.strokes = [{
+  type: "SOLID",
+  color: semanticVars["color/accent/primary"].resolvedValue,
+  strokeWeight: 1
+}];
+
+// Input
+const inputComponent = figma.createComponent();
+inputComponent.name = "Input";
+inputComponent.resizeWithoutConstraints(200, 36);
+const inputBg = inputComponent.appendChild(figma.createRectangle());
+inputBg.fills = [{
+  type: "SOLID",
+  color: semanticVars["color/bg/surface"].resolvedValue
+}];
+
+// Badge
+const badgeComponent = figma.createComponent();
+badgeComponent.name = "Badge";
+badgeComponent.resizeWithoutConstraints(80, 24);
+const badgeBg = badgeComponent.appendChild(figma.createRectangle());
+badgeBg.fills = [{
+  type: "SOLID",
+  color: semanticVars["color/accent/secondary"].resolvedValue
+}];
+
+// FINAL: Take screenshot showing all pages
+// =========================================
+const screenshot = await figma.getScreenshot();
+// Passes screenshot back to Claude for final validation display
+return {
+  fileKey: figma.fileKey,
+  pages: ["Cover", "Foundations", "References", "Components"],
+  variables: Object.keys(semanticVars).length,
+  components: 4,
+  screenshot: screenshot
+};
 ```
 
-**Critical:** All phases are in ONE script. No calling use_figma multiple times. This keeps tool invocations low (one approval gate, not 31).
+**Key constraints:**
+- ✅ ONE script, all inline
+- ✅ No multiple use_figma calls
+- ✅ Variables created before use
+- ✅ Text styles created and applied
+- ✅ Components use bound variables where possible
+- ✅ One final screenshot (not per-component)
 
 **Key points:**
 - One `use_figma` call, one approval
