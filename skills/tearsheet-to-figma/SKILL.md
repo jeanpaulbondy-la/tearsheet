@@ -72,19 +72,42 @@ Propose a semantic layer for the roles that map to a stable single hue: `color/b
 
 ## Step 5 — Build the file
 
-Load the `figma-use` skill, then make **one comprehensive `use_figma` call** that builds the entire starter kit in a single script. This consolidates all Figma mutations into one approval gate, not 31 separate ones.
+Load the `figma-use` skill. Then make **one single `use_figma` call** with a script that builds the entire starter kit. This is one approval gate, one mutation operation. Structure the script in three phases:
 
-**One script, three phases:**
+### The Script Structure
 
-1. **Setup (Cover + Foundations)**: Create the file structure. Build all primitives and semantic variables from 4a. Build all text styles from 4b. Set page backgrounds and styling. No validation loop—trust the structure.
+```javascript
+// Phase 1: Setup — Create structure + variables + styles
+// - Create Cover, Foundations, References, Components pages (dividers as needed)
+// - Set page backgrounds (dark theme default)
+// - Create all primitive variables (4a colors)
+// - Create all semantic variables (aliased to primitives)
+// - Create all text styles (4b)
 
-2. **References page**: Upload the selected source images via `upload_assets` with a short caption per image (what it contributed: palette/typography/component). Keeps the file traceable to the moodboard.
+// Phase 2: References — Upload images
+// - Call figma.fileKey and figma.currentPage (already set by figma-use)
+// - upload_assets() for all selected images with captions
+// - Place each image on References page with its caption
 
-3. **Components page** (if 4c is non-empty): Build the capped list from 4c. Each component uses the variables + text styles from Foundations. No per-component screenshot validation—build all, then one final screenshot at the end.
+// Phase 3: Components — Build UI elements (if any from 4c)
+// - Switch to Components page
+// - For each component in the capped list (max 5):
+//   - Create frame with component name
+//   - Add children (button, card, input, etc.) using variables from Foundation
+//   - Apply text styles from Foundation
+// - No per-component screenshot; just build all
 
-**One screenshot at the end** (not 15 during build) showing the complete file: Cover → Foundations → References → Components. This validates the whole thing without multiplication.
+// Final screenshot at the end showing Cover → Foundations → References → Components
+```
 
-**If the user explicitly asks for more** (e.g. "build the full design system," "add dark mode," "don't cap it"), note that this requires more tool volume and ask if they want that explicit trade-off. Confirm before starting, since it's different scope.
+**Key points:**
+- One `use_figma` call, one approval
+- No secondary skill dependencies (no `figma-generate-library`)
+- Trust the structure—no validate-fix loops
+- One final screenshot proves it worked
+- Total: 5-10 Figma API operations, not 31
+
+**If the user asks for more** (e.g. "build full design system," "add dark mode"), explain that requires more tool volume, and ask if they want to proceed with that trade-off.
 
 ## Step 6 — Report results
 
