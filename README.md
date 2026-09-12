@@ -59,9 +59,19 @@ Click any image to open it full size with its description, the extracted palette
 
 **Or turn a selection into a design-tool starter kit**
 
-Same selection step, then run `/tearsheet-to-figma` (new Figma file) or `/tearsheet-to-design` (new claude.ai/design project). Either builds color tokens, type styles, and a few components from what you selected, starting from the palettes already extracted from each image. See `skills/tearsheet-to-figma/SKILL.md` or `skills/tearsheet-to-design/SKILL.md` for the full behavior, including how to ask for the full (uncapped) design-system treatment instead of the starter-kit default.
+Same selection step, then in Claude Code run `/tearsheet-to-figma` (new Figma file with variables, type styles, and components) or `/tearsheet-to-design` (new claude.ai/design project). The skill automatically finds your saved selection and builds design tokens from the palettes already extracted from each image.
 
-That's the whole loop: drop in, `/process-inbox`, select in the browser, then `/use-tearsheet`, `/tearsheet-to-figma`, or `/tearsheet-to-design` in your next project.
+**The full workflow:**
+
+1. Drop images into `inbox/`
+2. Run `/process-inbox` in Claude Code (indexes and extracts color palettes)
+3. Browse at http://localhost:4560 and select images
+4. Click "Save for Figma" in the gallery
+5. In Claude Code, run `/tearsheet-to-figma` to build the Figma file
+
+That's it. No clicking around between apps; the skill auto-detects your selection and walks you through building the starter kit.
+
+See `skills/tearsheet-to-figma/SKILL.md` or `skills/tearsheet-to-design/SKILL.md` for details on the build process and how to request the full design-system treatment instead of the starter-kit default.
 
 ## Structure
 
