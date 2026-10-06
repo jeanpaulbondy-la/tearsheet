@@ -48,7 +48,7 @@ function buildPrompt(images, figmaUrl) {
   const skill = fs.readFileSync(SKILL_FILE, "utf8").replace(/^---[\s\S]*?---\s*/, "");
   const selection = images.map((img) => ({
     id: img.id,
-    path: path.join(IMAGES_DIR, img.filename),
+    path: path.join(IMAGES_DIR, img.mediaType === "video" && img.thumbnail ? img.thumbnail : img.filename),
     title: img.title,
     subtitle: img.subtitle,
     category: img.category,
@@ -67,7 +67,7 @@ Overrides to the workflow below:
       : ""
   }
 - If the figma-use or figma-generate-library skills aren't available, call the Figma MCP's get_figma_skill tool (if it exists) to load its conventions.
-- If a local image can't be uploaded, keep going and caption the reference with its palette swatches.
+- Reference images must be the real files, not placeholders. upload_assets returns single-use upload URLs and does not read local files, so: (1) in your build script, create one rectangle per reference on the References page and return its node ID; (2) call upload_assets once with count = number of references and nodeIds = those IDs, in order; (3) for each returned upload URL, send the bytes with exactly this shell command, using the file's path from the selection and its MIME type (image/png, image/jpeg, image/webp, or image/gif): curl -sS -X POST -H "Content-Type: <mime>" --data-binary @<path> <uploadUrl>. Only run curl against upload URLs returned by upload_assets. If an upload fails, keep that rectangle as a captioned placeholder and continue.
 - Your last message must contain the final Figma file URL on its own line.
 
 Selection:
@@ -109,7 +109,7 @@ function runFigmaBuild(images, figmaUrl, job) {
       "--verbose",
       "--no-session-persistence",
       "--permission-mode", "dontAsk",
-      "--allowedTools", `mcp__${FIGMA_MCP}`, "mcp__claude_ai_Figma", "Read",
+      "--allowedTools", `mcp__${FIGMA_MCP}`, "mcp__claude_ai_Figma", "Read", "Bash(curl -sS -X POST:*)",
     ],
     { cwd: ROOT, stdio: ["pipe", "pipe", "pipe"] }
   );
