@@ -136,9 +136,12 @@ function runFigmaBuild(images, figmaUrl, job) {
     }
 
     if (event.type === "system" && event.subtype === "init") {
+      // Remote servers can still be "pending" at init, so only a clear failure is fatal.
       const figmas = (event.mcp_servers || []).filter((s) => /figma/i.test(s.name));
-      if (!figmas.some((s) => s.status === "connected")) {
-        fail(figmas.length ? SIGN_IN_HINT : SETUP_HINT);
+      const usable = figmas.some((s) => s.status === "connected" || s.status === "pending");
+      if (!usable) {
+        const seen = (event.mcp_servers || []).map((s) => `${s.name}: ${s.status}`).join(", ") || "none";
+        fail(`${figmas.length ? SIGN_IN_HINT : SETUP_HINT} (Claude saw: ${seen})`);
         child.kill("SIGTERM");
       }
       return;
