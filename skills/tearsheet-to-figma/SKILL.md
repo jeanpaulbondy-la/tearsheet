@@ -9,7 +9,7 @@ Builds a new Figma file from the images the user selected in Tearsheet: real ext
 
 This skill is designed for the hybrid workflow: the user selects images in the Tearsheet web app (http://localhost:4560), saves their selection, then manually runs this skill in Claude Code. The skill automatically checks for a saved selection and offers to use it; if none exists, it guides you to Tearsheet first.
 
-This is heavier than `/use-tearsheet`: it needs Figma auth and makes a dozen or so tool calls. Default scope is a **complete starter kit**: color and type foundations, the real reference images, and up to 10 component families, each with its states and kinds as variants. It is not a full production design system (no light/dark modes or accessibility audit) unless the user explicitly asks.
+This is heavier than `/use-tearsheet`: it needs Figma auth and makes a dozen or so tool calls. Default scope is a **complete starter kit**: color and type foundations, the real reference images, and up to 14 component families, led by the components the references actually show,, each with its states and kinds as variants. It is not a full production design system (no light/dark modes or accessibility audit) unless the user explicitly asks.
 
 ## Preamble — Check for saved selection
 
@@ -68,7 +68,13 @@ Propose a semantic layer for the roles that map to a stable single hue: `color/b
 
 **4b. Typography** — From any image with legible type (UI sources, plus type-specimen-style mood images), describe what you see (serif/sans/mono, weight, tracking, mood). Pick the closest real Figma font per role — up to three roles: Heading, Body, Mono — verifying exact family/style strings with `listAvailableFontsAsync`. Name the resulting text styles to flag the approximation, e.g. `Heading/Serif (approx. Georgia)`. Never imply an exact font match.
 
-**4c. Components** — Build a real starter kit, not a sampler. From the UI-source images, identify the element types they actually show, then build up to **10 component families**. Prefer what the sources show (button, input, toggle, card, badge, nav or tab bar, list row, avatar, alert or toast, progress or chart tile, checkbox or radio, segmented control). If at least one source is UI and the sources show fewer than 8 families, fill out the set with the essentials any UI needs: button, input, toggle, checkbox, badge, alert, card, tab. If they show more than 10, pick the 10 most representative and name what got left out.
+**4c. Components** — Build a real starter kit, not a generic sampler. **The kit must be recognizably built from what the sources show.** If the references are chat apps, the kit has chat components; if they are smart-home dashboards, it has device controls; a generic button/input/toggle set that ignores the subject is a failed build.
+
+1. **Inventory first.** For every UI-source image, view it with the Read tool and list the specific components it contains, by their real names: for example chat bubble (incoming, outgoing), message input bar, voice-message player, typing indicator, conversation list row, avatar with presence dot, profile header, settings row, device control card, metric or stat tile, chart tile, bottom nav bar, segmented control, search field, notification badge. Include domain patterns, not just the basics. Write the inventory out before building.
+2. **Domain components come first.** Rank the inventory by how often a pattern appears across the selected images and how central it is to the subject, and build those first. Reserve **at most half** of the families for generic essentials, and only to fill gaps the sources don't already cover (button, input, toggle, checkbox, badge, alert, card, tab).
+3. **Size.** Up to **14 families** in total. If the inventory is longer, build the highest-ranked and say in your final report which patterns were left out.
+
+If there are no UI sources (all mood or palette references), build no components, as described in Step 2.
 
 **Every family is a component set with variants, not a single component.** Cover the states and kinds that family really has:
 - Button: Type (primary, secondary, ghost, destructive) × State (default, hover, pressed, disabled)
@@ -79,6 +85,12 @@ Propose a semantic layer for the roles that map to a stable single hue: `color/b
 - Alert or toast: Kind (info, success, warning, danger)
 - Card: State (default, hover, selected, disabled)
 - Tab or nav item: State (inactive, active, disabled)
+- Chat bubble: Direction (incoming, outgoing) × Kind (text, image, voice) × State (default, sending, failed)
+- Message input bar: State (empty, typing, recording, disabled)
+- Conversation list row: State (default, unread, selected, muted)
+- Avatar: Presence (online, away, offline, none) × Size
+- Settings row: Kind (navigation, toggle, destructive) × State (default, disabled)
+- Metric or stat tile, device control card, chart tile: State (default, active, inactive, alert)
 - Anything else: its natural states (default, hover, pressed, selected, disabled, error)
 
 Use real Figma variant properties (`combineAsVariants`) named `State`, `Type`, `Kind`, `Value`, so each is switchable in the properties panel.
