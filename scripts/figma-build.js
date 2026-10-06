@@ -69,6 +69,7 @@ Overrides to the workflow below:
   }
 - If the figma-use or figma-generate-library skills aren't available, call the Figma MCP's get_figma_skill tool (if it exists) to load its conventions.
 - Reference images must be the real files, not placeholders. upload_assets returns single-use upload URLs and does not read local files, so: (1) in your build script, create one rectangle per reference on the References page and return its node ID; (2) call upload_assets once with count = number of references and nodeIds = those IDs, in order; (3) for each returned upload URL, send the bytes with one Bash call per image, in parallel in a single message. Each call must be exactly this and nothing else, with the file's full absolute path from the selection written inline and its MIME type (image/png, image/jpeg, image/webp, or image/gif): curl -sS -X POST -H "Content-Type: <mime>" --data-binary @<absolute path> "<uploadUrl>". The command must start with the word curl. Do not use shell variables, cd, echo, newlines, ; or &&, and do not combine several uploads into one command, or the call is denied. Only run curl against upload URLs returned by upload_assets. If an upload fails, keep that rectangle as a captioned placeholder and continue.
+- You cannot download files. When you call get_screenshot, always pass enableBase64Response: true so the image comes back inline, and look at it.
 - Your last message must contain the final Figma file URL on its own line.
 
 Selection:

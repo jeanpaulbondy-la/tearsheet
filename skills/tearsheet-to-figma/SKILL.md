@@ -101,10 +101,29 @@ Use real Figma variant properties (`combineAsVariants`) named `State`, `Type`, `
 
 Load the `figma-use` skill (or the Figma MCP's `get_figma_skill` tool if the skill isn't available) for the Plugin API conventions. Then build with a handful of large `use_figma` calls: not dozens of tiny ones, and not one giant one. Never screenshot per component. In an interactive session, state the plan in one line and proceed without asking permission.
 
+**Layout rules for every page you build.** These exist because earlier builds produced swatch rows collapsed to 10px tall, with the swatches and their labels clipped out of sight.
+- **Never use `layoutWrap = "WRAP"`.** A wrapped auto-layout frame keeps its old height through the plugin API, so wrapped rows spill out of it and get clipped. For any grid (swatches, primitives, component sets), split the items into rows of at most 6 and stack the rows in a vertical auto-layout frame.
+- **Set `clipsContent = false`** on every container frame on the Foundations, References, and Components pages.
+- **Stack sections with auto-layout** (a vertical frame with a gap), never by hand-computing y positions, so a section cannot land on top of the next one.
+- Set `layoutSizingHorizontal` and `layoutSizingVertical` (HUG or FIXED) **after** appending children. A frame made with `createAutoLayout()` starts with a white fill, so set `fills = []` unless it needs one.
+- **Overflow check.** After building each page, run this in a `use_figma` call and fix every entry it returns (resize the parent or re-lay-out the children) before moving on:
+
+```js
+const bad = [];
+(function walk(n) {
+  if (!("children" in n)) return;
+  for (const c of n.children) {
+    if ((n.type === "FRAME" || n.type === "COMPONENT") && (c.x < -1 || c.y < -1 || c.x + c.width > n.width + 1 || c.y + c.height > n.height + 1)) bad.push(`${n.name} > ${c.name}`);
+    walk(c);
+  }
+})(figma.currentPage);
+return bad;
+```
+
 1. **Foundations call.** Create the pages (Cover, Foundations, References, Components) and bind every page background to `color/bg/primary`. Create the primitive variables, the semantic variables (aliased, with explicit scopes, never `ALL_SCOPES`), and the three text styles. Build the Foundations page: a semantic swatch row (each labeled with token path and natural name), per-primitive opacity rows, the type specimens, and the state and status color notes. Return any node IDs you need later.
 2. **References call.** One rectangle plus caption per selected image, stating what it contributed (palette, typography, which component). Then upload the real images into those rectangles (the headless instructions above say how; interactively, use `upload_assets`).
 3. **Component calls.** One `use_figma` call per component family (two families per call only if both are tiny). In each: load every font first; build the base component with auto layout and token-bound fills, strokes, and text styles; create one variant per state or kind; `combineAsVariants`; name the set and its properties; place the set in a labeled grid on the Components page with a section label above it. Check each call's returned node IDs instead of taking a screenshot.
-4. **Final check.** One `get_screenshot` per page. Fix anything visibly broken (overlapping layers, unreadable text, empty image fills) in a single follow-up call.
+4. **Final check.** Take one `get_screenshot` per page with `enableBase64Response: true` (a headless run cannot download the default link, so without that flag you never see the page). Look at each image. Fix anything visibly broken (clipped or empty swatches, overlapping layers, unreadable text, empty image fills) and re-run the overflow check. Never report the build as checked if you did not actually see the screenshots.
 
 Text placed on a page or inside a component always uses one of the text styles, never the default font. Never surface a real brand or product name anywhere in the file.
 
