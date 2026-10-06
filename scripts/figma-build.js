@@ -10,6 +10,7 @@ const ROOT = path.resolve(__dirname, "..");
 const IMAGES_DIR = path.join(ROOT, "images");
 const SKILL_FILE = path.join(ROOT, "skills", "tearsheet-to-figma", "SKILL.md");
 
+const BUILD_LOG = path.join(ROOT, ".tearsheet-figma-build.log");
 const FIGMA_MCP = "figma";
 const TIMEOUT_MS = 15 * 60 * 1000;
 const FIGMA_URL = /https:\/\/www\.figma\.com\/(?:design|file)\/[A-Za-z0-9]+[^\s)>"'\\\]]*/g;
@@ -76,6 +77,26 @@ ${JSON.stringify({ images: selection }, null, 2)}
 Workflow:
 
 ${skill}`;
+}
+
+// One short line per tool call, tool result, and final result, for debugging a build.
+function logEvent(event) {
+  const clip = (v) => (typeof v === "string" ? v : JSON.stringify(v) || "").replace(/\s+/g, " ").slice(0, 400);
+  const blocks = Array.isArray(event.message?.content) ? event.message.content : [];
+  const lines = blocks.flatMap((b) => {
+    if (b.type === "tool_use") return [`CALL ${b.name} ${clip(b.input)}`];
+    if (b.type === "tool_result") return [`${b.is_error ? "ERROR" : "OK"} ${clip(b.content)}`];
+    return [];
+  });
+  if (event.type === "result") {
+    lines.push(`RESULT ${clip(event.result)}`);
+    if (event.permission_denials?.length) lines.push(`DENIED ${clip(event.permission_denials)}`);
+  }
+  if (lines.length) {
+    try {
+      fs.appendFileSync(BUILD_LOG, lines.map((l) => `${new Date().toISOString()} ${l}\n`).join(""));
+    } catch {}
+  }
 }
 
 function stepFromEvent(event) {
@@ -146,6 +167,8 @@ function runFigmaBuild(images, figmaUrl, job) {
       }
       return;
     }
+
+    logEvent(event);
 
     const step = stepFromEvent(event);
     if (step) job.step = step;
