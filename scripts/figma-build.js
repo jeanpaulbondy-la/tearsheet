@@ -25,6 +25,7 @@ const STEP_LABELS = {
 const SETUP_HINT =
   `Figma isn't connected to Claude Code yet. Run \`npm run setup -- --figma\`, then run \`claude\` once, ` +
   `type /mcp, and sign in to "${FIGMA_MCP}".`;
+const SIGN_IN_HINT = `Figma needs a one-time sign-in. Run \`claude\` in Terminal, type /mcp, choose "${FIGMA_MCP}", and approve access in the browser. Then try again.`;
 
 function findClaude() {
   const candidates = [
@@ -137,7 +138,7 @@ function runFigmaBuild(images, figmaUrl, job) {
     if (event.type === "system" && event.subtype === "init") {
       const figma = (event.mcp_servers || []).find((s) => s.name === FIGMA_MCP);
       if (!figma || figma.status !== "connected") {
-        fail(SETUP_HINT);
+        fail(figma ? SIGN_IN_HINT : SETUP_HINT);
         child.kill("SIGTERM");
       }
       return;
