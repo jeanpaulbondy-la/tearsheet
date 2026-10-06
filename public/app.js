@@ -13,6 +13,7 @@ const selectionBar = document.getElementById("selection-bar");
 const selectionCountEl = document.getElementById("selection-count");
 const clearBtn = document.getElementById("clear-selection");
 const saveFigmaBtn = document.getElementById("save-for-figma");
+const checkInboxBtn = document.getElementById("check-inbox");
 const saveClaudeBtn = document.getElementById("save-for-claude");
 const indexToggle = document.getElementById("index-toggle");
 const lightboxEl = document.getElementById("lightbox");
@@ -474,6 +475,33 @@ async function loadGallery() {
   openFromHash();
 }
 
+async function checkInbox() {
+  checkInboxBtn.disabled = true;
+  checkInboxBtn.textContent = "Checking…";
+  let label = "Check inbox";
+
+  try {
+    const res = await fetch("/api/process-inbox", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    if (data.processed > 0) {
+      await loadGallery();
+      label = `✓ Added ${data.processed}`;
+    } else {
+      label = "Inbox is empty";
+    }
+  } catch {
+    label = "Failed";
+  }
+
+  checkInboxBtn.textContent = label;
+  setTimeout(() => {
+    checkInboxBtn.disabled = false;
+    checkInboxBtn.textContent = "Check inbox";
+  }, 2500);
+}
+
 function showFigmaModal() {
   const modal = document.getElementById("figma-modal");
   const input = document.getElementById("figma-url-input");
@@ -598,6 +626,7 @@ clearBtn.addEventListener("click", () => {
   if (!lightboxEl.hidden) renderDetailActions();
 });
 saveFigmaBtn.addEventListener("click", saveForFigma);
+checkInboxBtn.addEventListener("click", checkInbox);
 saveClaudeBtn.addEventListener("click", saveForClaude);
 indexToggle.addEventListener("click", toggleIndexDrawer);
 

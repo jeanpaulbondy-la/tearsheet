@@ -41,11 +41,11 @@ Then open **http://localhost:4560**. The gallery starts empty.
 **Add references**
 
 1. Drop image files (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`) or video files (`.mp4`, `.mov`, `.webm`, `.m4v`) into the `inbox/` folder.
-2. Start or refresh the server (`npm start`). Tearsheet auto-processes new files in the background on startup — renames them, extracts color palettes, guesses categories, and catalogs them. No prompts, no permission gates.
+2. Tearsheet picks them up automatically. On startup it scans `inbox/`; if the server is already running, click **Check inbox** in the top bar and new items appear in the gallery instantly. Files are renamed, get an extracted color palette and a guessed category, and are cataloged with no prompts or permission gates. Nothing runs in the background, so it costs no CPU or battery while idle.
 
 **Two processing modes:**
 
-- **Auto mode (default):** On startup, the server scans `inbox/`, generates sensible defaults (filename → title, palette extraction, category guessing), and adds items to the gallery silently. Fast, frictionless, zero interaction.
+- **Auto mode (default):** On startup or when you click **Check inbox**, the server scans `inbox/`, generates sensible defaults (filename → title, palette extraction, category guessing), and adds items to the gallery silently. Fast, frictionless, zero interaction.
 - **Manual mode (high quality):** In Claude Code, run `/process-inbox` to have Claude review each image, write custom tags and descriptions, and decide metadata. Better for images you want polished documentation on. Can be run anytime to refine existing gallery entries.
 
 **Browse**
@@ -74,7 +74,7 @@ Same selection step, then click "Build File" in Tearsheet. It creates a Figma fi
 ```
 1. Drop images into inbox/
    ↓
-2. npm start (auto-processes in background, silent)
+2. npm start, or click "Check inbox" if already running (auto-processes, silent)
    ↓
 3. Browse at http://localhost:4560
    ↓

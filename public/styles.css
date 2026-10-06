@@ -248,6 +248,27 @@ a {
   color: var(--ink);
 }
 
+.inbox-btn {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  transition: color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.inbox-btn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+
+.inbox-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
 .index-toggle {
   display: none;
   height: 30px;

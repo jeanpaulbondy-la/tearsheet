@@ -25,6 +25,15 @@ app.use(express.static(path.join(ROOT, "public")));
 app.use("/images", express.static(IMAGES_DIR));
 app.use("/data", express.static(path.join(ROOT, "data")));
 
+app.post("/api/process-inbox", (req, res) => {
+  try {
+    res.json({ ok: true, ...processInbox() });
+  } catch (error) {
+    console.error("Inbox processing failed:", error);
+    res.status(500).json({ error: "Inbox processing failed", details: error.message });
+  }
+});
+
 app.post("/api/selection", async (req, res) => {
   const images = Array.isArray(req.body.images) ? req.body.images : [];
   const figmaUrl = req.body.figmaUrl || null;
