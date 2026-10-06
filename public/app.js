@@ -68,7 +68,13 @@ function renderCard(item, index, total) {
   card.dataset.id = item.id;
   card.style.setProperty("--i", Math.min(index, 24));
   if (selected.has(item.id)) card.classList.add("selected");
-  if (!hasRenderedOnce) card.classList.add("entering");
+  if (!hasRenderedOnce) {
+    card.classList.add("entering");
+    // Drop the class when the entrance ends, or any later style change replays it from opacity 0.
+    card.addEventListener("animationend", (e) => {
+      if (e.animationName === "rise") card.classList.remove("entering");
+    });
+  }
 
   const tags = item.tags || [];
   const visibleTags = tags.slice(0, 3);

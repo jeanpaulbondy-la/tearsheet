@@ -490,16 +490,6 @@ a {
   cursor: pointer;
 }
 
-.card-surface {
-  opacity: 1;
-  transition: opacity 0.2s var(--ease);
-}
-
-.card:hover .card-surface,
-.card.selected .card-surface {
-  opacity: 1;
-}
-
 .card.entering .card-surface {
   animation: rise 0.55s var(--ease) both;
   animation-delay: calc(var(--i, 0) * 28ms);
@@ -514,10 +504,6 @@ a {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.card.entering:hover .card-surface {
-  animation: none;
 }
 
 .card-media {
