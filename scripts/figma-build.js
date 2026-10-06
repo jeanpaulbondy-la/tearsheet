@@ -109,7 +109,7 @@ function runFigmaBuild(images, figmaUrl, job) {
       "--verbose",
       "--no-session-persistence",
       "--permission-mode", "dontAsk",
-      "--allowedTools", `mcp__${FIGMA_MCP}`, "Read",
+      "--allowedTools", `mcp__${FIGMA_MCP}`, "mcp__claude_ai_Figma", "Read",
     ],
     { cwd: ROOT, stdio: ["pipe", "pipe", "pipe"] }
   );
@@ -136,9 +136,9 @@ function runFigmaBuild(images, figmaUrl, job) {
     }
 
     if (event.type === "system" && event.subtype === "init") {
-      const figma = (event.mcp_servers || []).find((s) => s.name === FIGMA_MCP);
-      if (!figma || figma.status !== "connected") {
-        fail(figma ? SIGN_IN_HINT : SETUP_HINT);
+      const figmas = (event.mcp_servers || []).filter((s) => /figma/i.test(s.name));
+      if (!figmas.some((s) => s.status === "connected")) {
+        fail(figmas.length ? SIGN_IN_HINT : SETUP_HINT);
         child.kill("SIGTERM");
       }
       return;
