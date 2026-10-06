@@ -5,6 +5,8 @@ const path = require("path");
 
 require("dotenv").config();
 
+const { processInbox } = require("./scripts/auto-process-inbox");
+
 const app = express();
 const PORT = process.env.PORT || 4560;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -110,6 +112,13 @@ function extractFigmaUrl(text) {
 
 app.listen(PORT, () => {
   console.log(`Tearsheet running at http://localhost:${PORT}`);
+
+  // Auto-process inbox on startup (silent, no permission prompts)
+  const result = processInbox();
+  if (result.processed > 0) {
+    console.log(`[inbox] Auto-processed ${result.processed} new item(s) to gallery`);
+  }
+
   if (!ANTHROPIC_API_KEY) {
     console.warn("\n⚠️  WARNING: ANTHROPIC_API_KEY not set.");
     console.warn("Add it to .env file to enable Figma file creation.\n");

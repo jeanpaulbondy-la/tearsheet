@@ -41,7 +41,12 @@ Then open **http://localhost:4560**. The gallery starts empty.
 **Add references**
 
 1. Drop image files (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`) or video files (`.mp4`, `.mov`, `.webm`, `.m4v`) into the `inbox/` folder.
-2. In Claude Code, inside the `tearsheet` folder, run `/process-inbox`. It renames, tags, describes, and catalogs each file, and extracts a real color palette from it. Videos get a representative frame pulled (via a bundled ffmpeg, no separate install) for the palette and thumbnail; cards preview the video on hover.
+2. Start or refresh the server (`npm start`). Tearsheet auto-processes new files in the background on startup — renames them, extracts color palettes, guesses categories, and catalogs them. No prompts, no permission gates.
+
+**Two processing modes:**
+
+- **Auto mode (default):** On startup, the server scans `inbox/`, generates sensible defaults (filename → title, palette extraction, category guessing), and adds items to the gallery silently. Fast, frictionless, zero interaction.
+- **Manual mode (high quality):** In Claude Code, run `/process-inbox` to have Claude review each image, write custom tags and descriptions, and decide metadata. Better for images you want polished documentation on. Can be run anytime to refine existing gallery entries.
 
 **Browse**
 
@@ -64,23 +69,35 @@ Same selection step, then click "Build File" in Tearsheet. It creates a Figma fi
 
 ### The complete workflow
 
+**Fast path (default):**
+
 ```
 1. Drop images into inbox/
    ↓
-2. Run /process-inbox (indexes + extracts palettes)
+2. npm start (auto-processes in background, silent)
    ↓
 3. Browse at http://localhost:4560
    ↓
-4. Select images → "Save for Figma" (optional: include your Figma project link for reference)
+4. Select images → Click "Build File"
    ↓
-5. Click "Build File"
-   ↓
-6. Figma file appears in seconds (browser opens it automatically)
+5. Figma file appears in seconds (browser opens it automatically)
 ```
 
-**One-click frictionless:** Selection → Build → Done. No extra steps, no skill invocation, no approval gates. Claude builds the entire file server-side using the Figma API.
+**Refined path (when you want custom metadata):**
 
-**Alternatively**, in Claude Code run `/tearsheet-to-figma` or `/tearsheet-to-design` for more control over the build (manual skill invocation gives you prompts and options).
+```
+1. Drop images into inbox/
+   ↓
+2. npm start (auto-processes with defaults)
+   ↓
+3. In Claude Code, run /process-inbox (Claude polishes metadata, tags, descriptions)
+   ↓
+4. Browse + Select → Click "Build File" (Figma inherits the refined data)
+```
+
+**One-click Figma creation:** Selection → Click → Done. No extra steps, no permission gates. Claude builds the entire file server-side using the Figma API.
+
+**For even more control**, in Claude Code run `/tearsheet-to-figma` or `/tearsheet-to-design` (manual skill invocation gives you prompts and design options).
 
 See `skills/tearsheet-to-figma/SKILL.md` for build details.
 
