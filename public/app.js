@@ -516,63 +516,48 @@ function closeFigmaModal() {
 }
 
 async function submitFigmaUrl() {
-  const input = document.getElementById("figma-url-input");
-  const figmaUrl = input.value.trim();
-
-  if (!figmaUrl) {
-    alert("Please enter a Figma URL");
-    return;
-  }
-
+  const figmaUrl = document.getElementById("figma-url-input").value.trim();
   closeFigmaModal();
 
   const selectedItems = items.filter((item) => selected.has(item.id));
+  const startedAt = Date.now();
   saveFigmaBtn.disabled = true;
-  saveFigmaBtn.textContent = "Building Figma file…";
+  saveFigmaBtn.textContent = "Starting…";
 
+  let label = "Failed";
   try {
-    const res = await fetch("/api/selection", {
+    const start = await fetch("/api/figma-build", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        images: selectedItems,
-        figmaUrl: figmaUrl
-      }),
+      body: JSON.stringify({ images: selectedItems, figmaUrl: figmaUrl || null }),
     });
-    const data = await res.json();
-    if (data.ok && data.figmaUrl) {
-      saveFigmaBtn.textContent = "✓ Figma file created";
-      setTimeout(() => {
-        window.open(data.figmaUrl, "_blank");
-      }, 500);
-    } else {
-      saveFigmaBtn.textContent = "Failed";
-      console.error(data.error, data.details);
+    const { jobId, error } = await start.json();
+    if (!start.ok) throw new Error(error);
+
+    for (;;) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const job = await (await fetch(`/api/figma-build/${jobId}`)).json();
+      if (job.status === "running") {
+        const minutes = Math.floor((Date.now() - startedAt) / 60000);
+        saveFigmaBtn.textContent = `${job.step}…${minutes ? ` ${minutes} min` : ""}`;
+      } else if (job.status === "done") {
+        label = "✓ Figma file ready";
+        window.open(job.figmaUrl, "_blank");
+        break;
+      } else {
+        throw new Error(job.error);
+      }
     }
   } catch (err) {
-    saveFigmaBtn.textContent = "Failed";
     console.error(err);
-  } finally {
-    setTimeout(() => {
-      saveFigmaBtn.disabled = false;
-      saveFigmaBtn.textContent = "Save for Figma";
-    }, 3000);
+    alert(`Couldn't build the Figma file.\n\n${err.message}`);
   }
-}
 
-function showProcessingModal() {
-  const processingModal = document.getElementById("figma-processing-modal");
-  processingModal.hidden = false;
-
-  // Auto-close after 5 minutes (300 seconds)
+  saveFigmaBtn.textContent = label;
   setTimeout(() => {
-    closeProcessingModal();
-  }, 300000);
-}
-
-function closeProcessingModal() {
-  const processingModal = document.getElementById("figma-processing-modal");
-  processingModal.hidden = true;
+    saveFigmaBtn.disabled = false;
+    saveFigmaBtn.textContent = "Save for Figma";
+  }, 3000);
 }
 
 function saveForFigma() {

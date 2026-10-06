@@ -16,13 +16,7 @@ cd tearsheet
 npm install && npm run setup
 ```
 
-**Then set up Figma integration:**
-
-1. Get your Anthropic API key from [console.anthropic.com](https://console.anthropic.com)
-2. Copy `.env.example` to `.env`
-3. Add your key: `ANTHROPIC_API_KEY=sk-ant-...`
-
-`npm run setup` installs the global Claude Code commands (`/use-tearsheet`, `/tearsheet-to-figma`, `/tearsheet-to-design`) into `~/.claude/skills/`. On macOS, it also builds **Tearsheet.app** — drag it onto the Dock to start the server and open the gallery from your menu bar.
+`npm run setup` installs the global Claude Code commands (`/use-tearsheet`, `/tearsheet-to-figma`, `/tearsheet-to-design`) into `~/.claude/skills/` and registers the Figma connection with Claude Code (needs [Claude Code](https://claude.com/claude-code) installed). On macOS, it also builds **Tearsheet.app** — drag it onto the Dock to start the server and open the gallery from your menu bar.
 
 <p>
   <img src="assets/readme/icon-128.png" alt="Tearsheet app icon" width="64" align="left" />
@@ -35,6 +29,8 @@ npm start
 ```
 
 Then open **http://localhost:4560**. The gallery starts empty.
+
+**One-time Figma sign-in:** run `claude`, type `/mcp`, choose `figma`, and approve access in the browser. After that, "Save for Figma" needs nothing else, and no API key: it runs on your Claude Code login. Start Tearsheet from Tearsheet.app or Terminal, not from inside a Claude Code session.
 
 ## Use
 
@@ -65,7 +61,7 @@ Click any image to open it full size with its description, the extracted palette
 
 **Or turn a selection into a design-tool starter kit**
 
-Same selection step, then click "Build File" in Tearsheet. It creates a Figma file with color tokens, type styles, and UI components — all automatically, using your Anthropic API key.
+Same selection step, then click "Build File" in Tearsheet. It creates a Figma file with color tokens, type styles, and UI components, automatically, by running Claude Code in the background on your Claude login.
 
 ### The complete workflow
 
@@ -80,7 +76,7 @@ Same selection step, then click "Build File" in Tearsheet. It creates a Figma fi
    ↓
 4. Select images → Click "Build File"
    ↓
-5. Figma file appears in seconds (browser opens it automatically)
+5. Figma file builds in the background (a few minutes; the button shows progress and the file opens when ready)
 ```
 
 **Refined path (when you want custom metadata):**
@@ -95,7 +91,7 @@ Same selection step, then click "Build File" in Tearsheet. It creates a Figma fi
 4. Browse + Select → Click "Build File" (Figma inherits the refined data)
 ```
 
-**One-click Figma creation:** Selection → Click → Done. No extra steps, no permission gates. Claude builds the entire file server-side using the Figma API.
+**One-click Figma creation:** Selection → Click → Done. No permission prompts: the server runs Claude Code headless with only the Figma tools allowed, and opens the finished file for you.
 
 **For even more control**, in Claude Code run `/tearsheet-to-figma` or `/tearsheet-to-design` (manual skill invocation gives you prompts and design options).
 
@@ -107,7 +103,8 @@ See `skills/tearsheet-to-figma/SKILL.md` for build details.
 - `images/`: processed, renamed images (git-ignored, this is your personal library)
 - `data/gallery.json`: metadata for every item, including its extracted palette (git-ignored)
 - `public/`: the gallery site (static HTML, CSS, JS; self-hosted type, no external requests)
-- `server.js`: serves the site and handles saving selections
+- `server.js`: serves the site, saves selections, and runs Figma builds as background jobs
+- `scripts/figma-build.js`: runs `claude -p` headless with the Figma MCP to build the file
 - `scripts/setup.js`: installs the global commands and builds the macOS launcher
 - `scripts/palette.js`, `scripts/video-thumbnail.js`: palette extraction and video frame capture used by `/process-inbox`
 - `.claude/skills/process-inbox/`: the `/process-inbox` command (project-scoped, auto-loaded)

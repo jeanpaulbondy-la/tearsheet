@@ -2,20 +2,24 @@
 // One-time setup after `npm install`:
 //   1. Installs the global Claude Code skills into ~/.claude/skills
 //   2. On macOS, builds Tearsheet.app (a Dock launcher) next to this file's project
+//   3. Registers the Figma MCP with Claude Code, which "Save for Figma" runs headless
 //
-// Usage: npm run setup            (both)
+// Usage: npm run setup            (all)
 //        npm run setup -- --skills (skills only)
 //        npm run setup -- --app    (app only)
+//        npm run setup -- --figma  (Figma connection only)
 
+const { execFileSync, spawnSync } = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
 const args = process.argv.slice(2);
-const only = args.find((a) => a === "--skills" || a === "--app");
+const only = args.find((a) => a === "--skills" || a === "--app" || a === "--figma");
 const doSkills = !only || only === "--skills";
 const doApp = !only || only === "--app";
+const doFigma = !only || only === "--figma";
 
 function copyDir(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
@@ -78,7 +82,7 @@ function buildApp() {
 DIR=${JSON.stringify(ROOT)}
 PORT=4560
 LOG="$DIR/.tearsheet-server.log"
-export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 cd "$DIR" || exit 1
 
@@ -103,5 +107,21 @@ open "http://localhost:$PORT"
   console.log("Drag it onto the Dock to pin it. Double-click starts the server and opens the gallery.");
 }
 
+function connectFigma() {
+  const { FIGMA_MCP } = require("./figma-build");
+  const has = (cmd, cmdArgs) => spawnSync(cmd, cmdArgs, { stdio: "ignore" }).status === 0;
+
+  if (!has("claude", ["--version"])) {
+    console.log("Skipping Figma: Claude Code isn't installed (https://claude.com/claude-code). Re-run `npm run setup -- --figma` after installing it.");
+    return;
+  }
+  if (!has("claude", ["mcp", "get", FIGMA_MCP])) {
+    execFileSync("claude", ["mcp", "add", "--transport", "http", "--scope", "user", FIGMA_MCP, "https://mcp.figma.com/mcp"], { stdio: "inherit" });
+  }
+  console.log(`Figma is registered with Claude Code as "${FIGMA_MCP}".`);
+  console.log("One-time sign-in: run `claude`, type /mcp, choose figma, and authenticate in the browser.");
+}
+
 if (doSkills) installSkills();
 if (doApp) buildApp();
+if (doFigma) connectFigma();
