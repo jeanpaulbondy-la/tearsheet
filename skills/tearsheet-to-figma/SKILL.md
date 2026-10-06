@@ -1,15 +1,15 @@
 ---
 name: tearsheet-to-figma
-description: Turn the user's saved Tearsheet selection into a new Figma starter kit — color variables, approximate typography styles, and (if any selected image looks like real UI) a small set of token-bound components. Automatically checks for a saved selection from the Tearsheet app, or guides the user to create one. Use when the user says things like "turn my tearsheet selection into a figma file", "build a figma starter kit from my references", or "/tearsheet-to-figma".
+description: Turn the user's saved Tearsheet selection into a new Figma starter kit — color variables, approximate typography styles, and (if any selected image looks like real UI) a full set of token-bound component families with their state variants. Automatically checks for a saved selection from the Tearsheet app, or guides the user to create one. Use when the user says things like "turn my tearsheet selection into a figma file", "build a figma starter kit from my references", or "/tearsheet-to-figma".
 ---
 
 # Tearsheet → Figma Starter Kit
 
-Builds a new Figma file from the images the user selected in Tearsheet: real extracted colors as variables, an approximate type ramp, and — only where the source images actually show UI — a capped set of components.
+Builds a new Figma file from the images the user selected in Tearsheet: real extracted colors as variables, an approximate type ramp, and — only where the source images actually show UI — a set of component families with state variants.
 
 This skill is designed for the hybrid workflow: the user selects images in the Tearsheet web app (http://localhost:4560), saves their selection, then manually runs this skill in Claude Code. The skill automatically checks for a saved selection and offers to use it; if none exists, it guides you to Tearsheet first.
 
-This is heavier than `/use-tearsheet`: it needs Figma auth and makes many tool calls. Default scope is a **small starter kit**, not a full production design system. Only go bigger if the user explicitly asks (see Step 5).
+This is heavier than `/use-tearsheet`: it needs Figma auth and makes a dozen or so tool calls. Default scope is a **complete starter kit**: color and type foundations, the real reference images, and up to 10 component families, each with its states and kinds as variants. It is not a full production design system (no light/dark modes or accessibility audit) unless the user explicitly asks.
 
 ## Preamble — Check for saved selection
 
@@ -68,201 +68,35 @@ Propose a semantic layer for the roles that map to a stable single hue: `color/b
 
 **4b. Typography** — From any image with legible type (UI sources, plus type-specimen-style mood images), describe what you see (serif/sans/mono, weight, tracking, mood). Pick the closest real Figma font per role — up to three roles: Heading, Body, Mono — verifying exact family/style strings with `listAvailableFontsAsync`. Name the resulting text styles to flag the approximation, e.g. `Heading/Serif (approx. Georgia)`. Never imply an exact font match.
 
-**4c. Components** — From UI-source images only, list the distinct element types you can actually identify (button, nav bar, card, input, badge, etc.), capped at **5** for starter-kit scope. If more are visible, pick the 5 most representative and name what got left out and why — the user can ask for the rest in a follow-up run.
+**4c. Components** — Build a real starter kit, not a sampler. From the UI-source images, identify the element types they actually show, then build up to **10 component families**. Prefer what the sources show (button, input, toggle, card, badge, nav or tab bar, list row, avatar, alert or toast, progress or chart tile, checkbox or radio, segmented control). If at least one source is UI and the sources show fewer than 8 families, fill out the set with the essentials any UI needs: button, input, toggle, checkbox, badge, alert, card, tab. If they show more than 10, pick the 10 most representative and name what got left out.
+
+**Every family is a component set with variants, not a single component.** Cover the states and kinds that family really has:
+- Button: Type (primary, secondary, ghost, destructive) × State (default, hover, pressed, disabled)
+- Input: State (default, focused, filled, error, disabled)
+- Toggle: Value (off, on) × State (default, disabled)
+- Checkbox and radio: Value (unchecked, checked) × State (default, disabled)
+- Badge: Kind (neutral, accent, success, warning, danger)
+- Alert or toast: Kind (info, success, warning, danger)
+- Card: State (default, hover, selected, disabled)
+- Tab or nav item: State (inactive, active, disabled)
+- Anything else: its natural states (default, hover, pressed, selected, disabled, error)
+
+Use real Figma variant properties (`combineAsVariants`) named `State`, `Type`, `Kind`, `Value`, so each is switchable in the properties panel.
+
+**Status and state colors.** Add semantic tokens `color/status/success`, `color/status/warning`, `color/status/danger`, `color/status/info`, and `color/text/on-status`, each aliasing a primitive. Use the palette's own hues where one fits (a red-leaning coral for danger, a green-leaning teal for success); where none does, add a muted primitive tuned to the palette's saturation and lightness so it doesn't clash. Name each one naturally. State colors follow the opacity constraint above: hover is the accent RGB lightened about 8% and pressed is darkened about 12%, both as unbound flat fills documented on the Foundations page; disabled is the component's layer `opacity` set to 0.4 (layer opacity is safe, unlike paint opacity on a bound paint); focused is a 2px outline stroke in `color/accent/primary`; error is a stroke in `color/status/danger`.
 
 ## Step 5 — Build the file
 
-Load the `figma-use` skill. Then make **one single `use_figma` call** with a script that builds the entire starter kit. This is one approval gate, one mutation operation. Structure the script in three phases:
+Load the `figma-use` skill (or the Figma MCP's `get_figma_skill` tool if the skill isn't available) for the Plugin API conventions. Then build with a handful of large `use_figma` calls: not dozens of tiny ones, and not one giant one. Never screenshot per component. In an interactive session, state the plan in one line and proceed without asking permission.
 
-### The Script: ONE use_figma() Call (Complete Implementation)
+1. **Foundations call.** Create the pages (Cover, Foundations, References, Components) and bind every page background to `color/bg/primary`. Create the primitive variables, the semantic variables (aliased, with explicit scopes, never `ALL_SCOPES`), and the three text styles. Build the Foundations page: a semantic swatch row (each labeled with token path and natural name), per-primitive opacity rows, the type specimens, and the state and status color notes. Return any node IDs you need later.
+2. **References call.** One rectangle plus caption per selected image, stating what it contributed (palette, typography, which component). Then upload the real images into those rectangles (the headless instructions above say how; interactively, use `upload_assets`).
+3. **Component calls.** One `use_figma` call per component family (two families per call only if both are tiny). In each: load every font first; build the base component with auto layout and token-bound fills, strokes, and text styles; create one variant per state or kind; `combineAsVariants`; name the set and its properties; place the set in a labeled grid on the Components page with a section label above it. Check each call's returned node IDs instead of taking a screenshot.
+4. **Final check.** One `get_screenshot` per page. Fix anything visibly broken (overlapping layers, unreadable text, empty image fills) in a single follow-up call.
 
-Write **one single script** that does everything. Do not make multiple use_figma calls.
+Text placed on a page or inside a component always uses one of the text styles, never the default font. Never surface a real brand or product name anywhere in the file.
 
-```javascript
-// PHASE 1: Setup — Pages, variables, text styles
-// ===============================================
-
-// 1. Create 4 pages
-const cover = figma.root.appendChild(figma.createPage());
-cover.name = "Cover";
-const foundations = figma.root.appendChild(figma.createPage());
-foundations.name = "Foundations";
-const references = figma.root.appendChild(figma.createPage());
-references.name = "References";
-const components = figma.root.appendChild(figma.createPage());
-components.name = "Components";
-
-// 2. Set page backgrounds (dark theme, from deduced palette)
-const bgColor = <resolved hex from 4a>; // e.g., #0a0e27
-[cover, foundations, references, components].forEach(page => {
-  page.backgrounds = [{
-    type: "SOLID",
-    color: hexToRgb(bgColor),
-    opacity: 1
-  }];
-});
-
-// 3. Create primitive color variables (6-8 base colors from 4a)
-const primitives = {};
-const baseColors = <deduped hexes from pooled palettes>;
-baseColors.forEach((hex, idx) => {
-  const colorName = <natural-name: coral, seafoam, rust, etc.>;
-  const variable = figma.variables.createVariable(
-    `primitive/${colorName}`,
-    figma.libraryName,
-    "COLOR"
-  );
-  variable.setValueForMode(figma.variables.getLocalLibraryDefaultMode(), hexToRgb(hex));
-  primitives[colorName] = variable;
-});
-
-// 4. Create semantic color variables (aliased to primitives)
-const semanticVars = {};
-const semanticMappings = {
-  "color/bg/primary": primitives.ink,
-  "color/bg/surface": primitives.slate,
-  "color/text/primary": primitives.cream,
-  "color/text/secondary": primitives.cream, // (will apply opacity at use-site)
-  "color/accent/primary": primitives.cyan,
-  "color/accent/secondary": primitives.magenta,
-  "color/text/on-accent": primitives.ink
-};
-
-Object.entries(semanticMappings).forEach(([path, primitiveVar]) => {
-  const variable = figma.variables.createVariable(path, figma.libraryName, "COLOR");
-  variable.setValueForMode(figma.variables.getLocalLibraryDefaultMode(), {
-    type: "VARIABLE_ALIAS",
-    id: primitiveVar.id
-  });
-  semanticVars[path] = variable;
-});
-
-// 5. Create text styles (3 roles: Heading, Body, Mono from 4b)
-// Use listAvailableFontsAsync to resolve exact font names
-await figma.loadAllPagesAsync();
-const headingStyle = figma.createTextStyle();
-headingStyle.name = "Heading/Sans (approx. <font-name>)";
-headingStyle.fontSize = 32;
-headingStyle.fontName = { family: "Inter", style: "Bold" }; // or actual resolved font
-
-const bodyStyle = figma.createTextStyle();
-bodyStyle.name = "Body/Sans (approx. <font-name>)";
-bodyStyle.fontSize = 16;
-bodyStyle.fontName = { family: "Inter", style: "Regular" };
-
-const monoStyle = figma.createTextStyle();
-monoStyle.name = "Mono/Monospace (approx. <font-name>)";
-monoStyle.fontSize = 12;
-monoStyle.fontName = { family: "SF Mono", style: "Regular" };
-
-// PHASE 2: References — Add images with captions
-// ================================================
-
-figma.currentPage = references;
-
-// For each selected image:
-// - Place image on page
-// - Add caption text node (what it contributed: palette/typography/component)
-selectedImages.forEach(img => {
-  const imageFrame = figma.createFrame();
-  imageFrame.name = `Reference: ${img.title}`;
-  imageFrame.resizeWithoutConstraints(300, 200);
-  
-  // Place image (assuming you can fetch it as bytes)
-  const imageNode = imageFrame.appendChild(figma.createImage(imageBytes));
-  
-  // Add caption
-  const captionText = figma.createText();
-  captionText.characters = `${img.title}\n${img.contribution}`; // e.g., "Engine Console\nUI source - colors, dashboard patterns"
-  captionText.setTextStyleIdAsync(bodyStyle.id);
-  captionText.fontSize = 12;
-  imageFrame.appendChild(captionText);
-});
-
-// PHASE 3: Components — Build UI elements (if any UI sources)
-// ===========================================================
-
-figma.currentPage = components;
-
-// For each component type in capped list (max 5: button, card, input, badge, etc.):
-
-// Button
-const buttonComponent = figma.createComponent();
-buttonComponent.name = "Button";
-buttonComponent.resizeWithoutConstraints(120, 44);
-const buttonBg = buttonComponent.appendChild(figma.createRectangle());
-buttonBg.fills = [{
-  type: "SOLID",
-  color: semanticVars["color/accent/primary"].resolvedValue // or bound variable
-}];
-const buttonText = buttonComponent.appendChild(figma.createText());
-buttonText.characters = "Click me";
-buttonText.setTextStyleIdAsync(bodyStyle.id);
-
-// Card
-const cardComponent = figma.createComponent();
-cardComponent.name = "Card";
-cardComponent.resizeWithoutConstraints(300, 400);
-const cardBg = cardComponent.appendChild(figma.createRectangle());
-cardBg.fills = [{
-  type: "SOLID",
-  color: semanticVars["color/bg/surface"].resolvedValue
-}];
-cardBg.strokes = [{
-  type: "SOLID",
-  color: semanticVars["color/accent/primary"].resolvedValue,
-  strokeWeight: 1
-}];
-
-// Input
-const inputComponent = figma.createComponent();
-inputComponent.name = "Input";
-inputComponent.resizeWithoutConstraints(200, 36);
-const inputBg = inputComponent.appendChild(figma.createRectangle());
-inputBg.fills = [{
-  type: "SOLID",
-  color: semanticVars["color/bg/surface"].resolvedValue
-}];
-
-// Badge
-const badgeComponent = figma.createComponent();
-badgeComponent.name = "Badge";
-badgeComponent.resizeWithoutConstraints(80, 24);
-const badgeBg = badgeComponent.appendChild(figma.createRectangle());
-badgeBg.fills = [{
-  type: "SOLID",
-  color: semanticVars["color/accent/secondary"].resolvedValue
-}];
-
-// FINAL: Take screenshot showing all pages
-// =========================================
-const screenshot = await figma.getScreenshot();
-// Passes screenshot back to Claude for final validation display
-return {
-  fileKey: figma.fileKey,
-  pages: ["Cover", "Foundations", "References", "Components"],
-  variables: Object.keys(semanticVars).length,
-  components: 4,
-  screenshot: screenshot
-};
-```
-
-**Key constraints:**
-- ✅ ONE script, all inline
-- ✅ No multiple use_figma calls
-- ✅ Variables created before use
-- ✅ Text styles created and applied
-- ✅ Components use bound variables where possible
-- ✅ One final screenshot (not per-component)
-
-**Key points:**
-- One `use_figma` call, one approval
-- No secondary skill dependencies (no `figma-generate-library`)
-- Trust the structure—no validate-fix loops
-- One final screenshot proves it worked
-- Total: 5-10 Figma API operations, not 31
-
-**If the user asks for more** (e.g. "build full design system," "add dark mode"), explain that requires more tool volume, and ask if they want to proceed with that trade-off.
+**If the user asks for more** (dark/light modes, a full accessibility audit, every component in the sources), do it, but say that it makes the build much longer.
 
 ## Step 6 — Report results
 
@@ -272,5 +106,4 @@ Give the user: the new Figma file URL, a short breakdown of which source image c
 
 - `path` values in the selection file are absolute — use them as-is.
 - If an image path no longer exists, mention it and skip it rather than failing the whole run.
-- This skill uses **direct Figma API calls** (via `use_figma`), not secondary skills like `figma-generate-library`. This keeps tool invocations minimal (one large script instead of 31 small ones) and maintains frictionless UX (one permission gate, not many).
-- One final screenshot at the end (not per-component validation) proves the file built correctly.
+- This skill uses **direct Figma API calls** (via `use_figma`), not secondary skills like `figma-generate-library`. Keep calls few and large, and take screenshots only at the end.

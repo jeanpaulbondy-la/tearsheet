@@ -12,7 +12,7 @@ const SKILL_FILE = path.join(ROOT, "skills", "tearsheet-to-figma", "SKILL.md");
 
 const BUILD_LOG = path.join(ROOT, ".tearsheet-figma-build.log");
 const FIGMA_MCP = "figma";
-const TIMEOUT_MS = 15 * 60 * 1000;
+const TIMEOUT_MS = 30 * 60 * 1000;
 const FIGMA_URL = /https:\/\/www\.figma\.com\/(?:design|file)\/[A-Za-z0-9]+[^\s)>"'\\\]]*/g;
 
 const STEP_LABELS = {
@@ -140,7 +140,7 @@ function runFigmaBuild(images, figmaUrl, job) {
   let stderr = "";
   let buffer = "";
   const timer = setTimeout(() => {
-    fail("Timed out after 15 minutes.");
+    fail("Timed out after 30 minutes.");
     child.kill("SIGTERM");
   }, TIMEOUT_MS);
 

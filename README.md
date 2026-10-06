@@ -76,7 +76,7 @@ Same selection step, then click "Build File" in Tearsheet. It creates a Figma fi
    ↓
 4. Select images → Click "Build File"
    ↓
-5. Figma file builds in the background (a few minutes; the button shows progress and the file opens when ready)
+5. Figma file builds in the background (5 to 10 minutes; the button shows progress and the file opens when ready)
 ```
 
 **Refined path (when you want custom metadata):**
