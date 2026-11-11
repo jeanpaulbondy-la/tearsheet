@@ -5,6 +5,7 @@ const os = require("os");
 const path = require("path");
 
 const { processInbox } = require("./scripts/auto-process-inbox");
+const { enrichPending, getStatus: getInboxStatus } = require("./scripts/enrich-inbox");
 const { runFigmaBuild } = require("./scripts/figma-build");
 
 const app = express();
@@ -13,6 +14,7 @@ const PORT = process.env.PORT || 4560;
 const ROOT = __dirname;
 const IMAGES_DIR = path.join(ROOT, "images");
 const GALLERY_JSON = path.join(ROOT, "data", "gallery.json");
+const BUILDS_JSON = path.join(ROOT, "data", "figma-builds.json");
 const SELECTION_FILE = path.join(os.homedir(), ".claude", "tearsheet-selection.json");
 
 if (!fs.existsSync(GALLERY_JSON)) {
@@ -27,12 +29,16 @@ app.use("/data", express.static(path.join(ROOT, "data")));
 
 app.post("/api/process-inbox", (req, res) => {
   try {
-    res.json({ ok: true, ...processInbox() });
+    const result = processInbox();
+    enrichPending();
+    res.json({ ok: true, ...result, ...getInboxStatus() });
   } catch (error) {
     console.error("Inbox processing failed:", error);
     res.status(500).json({ error: "Inbox processing failed", details: error.message });
   }
 });
+
+app.get("/api/inbox-status", (req, res) => res.json(getInboxStatus()));
 
 // "Save for Claude Code": writes the selection for /use-tearsheet and /tearsheet-to-design.
 app.post("/api/selection", (req, res) => {
@@ -63,8 +69,30 @@ app.post("/api/selection", (req, res) => {
   res.json({ ok: true, savedTo: SELECTION_FILE, count: payload.images.length });
 });
 
-// "Save for Figma": runs Claude Code headless as a background job; the page polls for progress.
-const figmaJobs = new Map();
+// "Save for Figma": runs Claude Code headless as a background job. The history is saved to
+// disk so the page can pick a build back up after a reload, and finished builds keep their link.
+const MAX_BUILDS = 20;
+
+function loadBuilds() {
+  try {
+    return JSON.parse(fs.readFileSync(BUILDS_JSON, "utf8")).map((b) =>
+      b.status === "running"
+        ? { ...b, status: "error", finishedAt: Date.now(), error: "Tearsheet restarted during this build. Check your Figma drafts; the file may have been created." }
+        : b
+    );
+  } catch {
+    return [];
+  }
+}
+
+let builds = loadBuilds();
+
+function saveBuilds() {
+  builds = builds.slice(0, MAX_BUILDS);
+  fs.writeFileSync(BUILDS_JSON, JSON.stringify(builds, null, 2));
+}
+
+if (builds.length) saveBuilds();
 
 app.post("/api/figma-build", (req, res) => {
   const images = Array.isArray(req.body.images) ? req.body.images : [];
@@ -72,21 +100,32 @@ app.post("/api/figma-build", (req, res) => {
     return res.status(400).json({ error: "No images provided" });
   }
 
-  const running = [...figmaJobs.values()].find((job) => job.status === "running");
+  const running = builds.find((b) => b.status === "running");
   if (running) {
     return res.status(202).json({ jobId: running.id });
   }
 
-  const job = { id: crypto.randomUUID(), status: "running", step: "Starting" };
-  figmaJobs.set(job.id, job);
-  runFigmaBuild(images, req.body.figmaUrl || null, job);
+  const job = {
+    id: crypto.randomUUID(),
+    status: "running",
+    step: "Starting",
+    startedAt: Date.now(),
+    count: images.length,
+    titles: images.map((img) => img.title),
+  };
+  builds.unshift(job);
+  saveBuilds();
+  runFigmaBuild(images, req.body.figmaUrl || null, job, saveBuilds);
   res.status(202).json({ jobId: job.id });
 });
 
-app.get("/api/figma-build/:id", (req, res) => {
-  const job = figmaJobs.get(req.params.id);
+app.get("/api/figma-builds", (req, res) => res.json(builds));
+
+app.post("/api/figma-build/:id/cancel", (req, res) => {
+  const job = builds.find((b) => b.id === req.params.id);
   if (!job) return res.status(404).json({ error: "Unknown build" });
-  res.json({ status: job.status, step: job.step, figmaUrl: job.figmaUrl, error: job.error });
+  if (job.status === "running" && job.cancel) job.cancel();
+  res.json({ ok: true });
 });
 
 app.listen(PORT, () => {
@@ -94,6 +133,7 @@ app.listen(PORT, () => {
 
   const result = processInbox();
   if (result.processed > 0) {
-    console.log(`[inbox] Auto-processed ${result.processed} new item(s) to gallery`);
+    console.log(`[inbox] Added ${result.processed} new item(s) to the gallery`);
   }
+  enrichPending();
 });

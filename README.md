@@ -37,12 +37,9 @@ Then open **http://localhost:4560**. The gallery starts empty.
 **Add references**
 
 1. Drop image files (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`) or video files (`.mp4`, `.mov`, `.webm`, `.m4v`) into the `inbox/` folder.
-2. Tearsheet picks them up automatically. On startup it scans `inbox/`; if the server is already running, click **Check inbox** in the top bar and new items appear in the gallery instantly. Files are renamed, get an extracted color palette and a guessed category, and are cataloged with no prompts or permission gates. Nothing runs in the background, so it costs no CPU or battery while idle.
+2. Tearsheet picks them up automatically. On startup it scans `inbox/`; if the server is already running, click **Check inbox** in the top bar. New items appear in the gallery right away with their color palette, then Claude Code looks at each image in the background and writes its real title, tags, category, and description (the button shows "Describing…" and the gallery refreshes when it's done). No prompts or permission gates, and nothing runs while you're idle.
 
-**Two processing modes:**
-
-- **Auto mode (default):** On startup or when you click **Check inbox**, the server scans `inbox/`, generates sensible defaults (filename → title, palette extraction, category guessing), and adds items to the gallery silently. Fast, frictionless, zero interaction.
-- **Manual mode (high quality):** In Claude Code, run `/process-inbox` to have Claude review each image, write custom tags and descriptions, and decide metadata. Better for images you want polished documentation on. Can be run anytime to refine existing gallery entries.
+If Claude Code isn't signed in, new items still appear with filename titles, and are described automatically the next time you start Tearsheet or click **Check inbox** after signing in. `/process-inbox` in Claude Code still works if you want to re-describe items by hand.
 
 **Browse**
 
@@ -65,30 +62,16 @@ Same selection step, then click "Build File" in Tearsheet. It creates a Figma fi
 
 ### The complete workflow
 
-**Fast path (default):**
-
 ```
 1. Drop images into inbox/
    ↓
-2. npm start, or click "Check inbox" if already running (auto-processes, silent)
+2. npm start, or click "Check inbox" if already running (adds items instantly, Claude describes them in the background)
    ↓
 3. Browse at http://localhost:4560
    ↓
 4. Select images → Click "Build File"
    ↓
-5. Figma file builds in the background (5 to 10 minutes; the button shows progress and the file opens when ready)
-```
-
-**Refined path (when you want custom metadata):**
-
-```
-1. Drop images into inbox/
-   ↓
-2. npm start (auto-processes with defaults)
-   ↓
-3. In Claude Code, run /process-inbox (Claude polishes metadata, tags, descriptions)
-   ↓
-4. Browse + Select → Click "Build File" (Figma inherits the refined data)
+5. Figma file builds in the background (5 to 10 minutes; the button shows progress and the file opens when ready). Close the tab or reload if you like: the Builds button in the top bar lists every build with its status and an "Open in Figma" link, and can cancel one in progress
 ```
 
 **One-click Figma creation:** Selection → Click → Done. No permission prompts: the server runs Claude Code headless with only the Figma tools allowed, and opens the finished file for you.
@@ -105,6 +88,8 @@ See `skills/tearsheet-to-figma/SKILL.md` for build details.
 - `public/`: the gallery site (static HTML, CSS, JS; self-hosted type, no external requests)
 - `server.js`: serves the site, saves selections, and runs Figma builds as background jobs
 - `scripts/figma-build.js`: runs `claude -p` headless with the Figma MCP to build the file
+- `scripts/auto-process-inbox.js`, `scripts/enrich-inbox.js`: add inbox files instantly, then have Claude Code describe them in the background
+- `scripts/claude-cli.js`: finds and safely launches headless Claude Code for the scripts above
 - `scripts/setup.js`: installs the global commands and builds the macOS launcher
 - `scripts/palette.js`, `scripts/video-thumbnail.js`: palette extraction and video frame capture used by `/process-inbox`
 - `.claude/skills/process-inbox/`: the `/process-inbox` command (project-scoped, auto-loaded)

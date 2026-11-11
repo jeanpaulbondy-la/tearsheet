@@ -14,6 +14,11 @@ const selectionCountEl = document.getElementById("selection-count");
 const clearBtn = document.getElementById("clear-selection");
 const saveFigmaBtn = document.getElementById("save-for-figma");
 const checkInboxBtn = document.getElementById("check-inbox");
+const buildsBtn = document.getElementById("builds-btn");
+const buildsDot = document.getElementById("builds-dot");
+const buildsModal = document.getElementById("builds-modal");
+const buildsList = document.getElementById("builds-list");
+const buildsEmpty = document.getElementById("builds-empty");
 const saveClaudeBtn = document.getElementById("save-for-claude");
 const indexToggle = document.getElementById("index-toggle");
 const lightboxEl = document.getElementById("lightbox");
@@ -481,27 +486,57 @@ async function loadGallery() {
   openFromHash();
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+let inboxWatching = false;
+
+// While Claude describes new items in the background, show progress, then reload the gallery.
+async function watchInbox(added = 0) {
+  if (inboxWatching) return;
+  inboxWatching = true;
+  checkInboxBtn.disabled = true;
+
+  try {
+    let status;
+    do {
+      status = await (await fetch("/api/inbox-status")).json();
+      if (status.enriching) {
+        checkInboxBtn.textContent = `Describing ${status.pending}…`;
+        await sleep(2500);
+      }
+    } while (status.enriching);
+
+    await loadGallery();
+    checkInboxBtn.title = status.error || "";
+    checkInboxBtn.textContent = status.error ? "Added, not described" : added ? `✓ Added ${added}` : "✓ Described";
+  } catch {
+    checkInboxBtn.textContent = "Failed";
+  }
+
+  inboxWatching = false;
+  setTimeout(() => {
+    checkInboxBtn.disabled = false;
+    checkInboxBtn.textContent = "Check inbox";
+  }, 3000);
+}
+
 async function checkInbox() {
   checkInboxBtn.disabled = true;
   checkInboxBtn.textContent = "Checking…";
-  let label = "Check inbox";
 
   try {
     const res = await fetch("/api/process-inbox", { method: "POST" });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
-    if (data.processed > 0) {
-      await loadGallery();
-      label = `✓ Added ${data.processed}`;
-    } else {
-      label = "Inbox is empty";
-    }
+    if (data.processed > 0) await loadGallery();
+    if (data.enriching) return watchInbox(data.processed);
+
+    checkInboxBtn.textContent = data.processed > 0 ? `✓ Added ${data.processed}` : "Inbox is empty";
+    checkInboxBtn.title = data.error || "";
   } catch {
-    label = "Failed";
+    checkInboxBtn.textContent = "Failed";
   }
 
-  checkInboxBtn.textContent = label;
   setTimeout(() => {
     checkInboxBtn.disabled = false;
     checkInboxBtn.textContent = "Check inbox";
@@ -521,49 +556,153 @@ function closeFigmaModal() {
   modal.hidden = true;
 }
 
+/* ---------- figma builds ---------- */
+
+let builds = [];
+let buildsTimer = null;
+let readyFlashUntil = 0;
+const watchedBuilds = new Set();
+const isRunning = (build) => build.status === "running";
+
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function elapsed(build) {
+  const minutes = Math.floor((Date.now() - build.startedAt) / 60000);
+  return minutes ? ` ${minutes} min` : "";
+}
+
+function updateFigmaButton() {
+  const running = builds.find(isRunning);
+  buildsDot.hidden = !running;
+
+  if (running) {
+    saveFigmaBtn.disabled = true;
+    saveFigmaBtn.textContent = `${running.step}…${elapsed(running)}`;
+  } else {
+    saveFigmaBtn.disabled = false;
+    saveFigmaBtn.textContent = Date.now() < readyFlashUntil ? "✓ Figma file ready" : "Save for Figma";
+  }
+}
+
+function renderBuild(build) {
+  const li = element("li", `build build-${build.status}`);
+
+  const head = element("div", "build-head");
+  head.append(element("span", "build-title", `${build.count} reference${build.count === 1 ? "" : "s"}`));
+  const label = { running: `${build.step}…${elapsed(build)}`, done: "Ready", error: "Failed", cancelled: "Cancelled" }[build.status];
+  head.append(element("span", "build-status", label));
+  li.append(head);
+
+  const titles = build.titles || [];
+  const shown = titles.slice(0, 3).join(", ") + (titles.length > 3 ? ` +${titles.length - 3} more` : "");
+  const when = new Date(build.startedAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  li.append(element("p", "build-meta", `${when} · ${shown}`));
+
+  if (build.status === "error" && build.error) li.append(element("p", "build-error-text", build.error));
+
+  const actions = element("div", "build-actions");
+  if (build.status === "done" && build.figmaUrl?.startsWith("https://www.figma.com/")) {
+    const link = element("a", "", "Open in Figma");
+    link.href = build.figmaUrl;
+    link.target = "_blank";
+    link.rel = "noopener";
+    actions.append(link);
+  }
+  if (isRunning(build)) {
+    const cancel = element("button", "", "Cancel build");
+    cancel.type = "button";
+    cancel.addEventListener("click", () => cancelBuild(build.id));
+    actions.append(cancel);
+  }
+  if (actions.children.length) li.append(actions);
+
+  return li;
+}
+
+function renderBuilds() {
+  buildsList.replaceChildren(...builds.map(renderBuild));
+  buildsEmpty.hidden = builds.length > 0;
+}
+
+function openBuilds() {
+  buildsModal.hidden = false;
+  refreshBuilds();
+}
+
+function closeBuilds() {
+  buildsModal.hidden = true;
+}
+
+// A build that finishes while this page is watching it opens the file, or the list if the browser blocks the popup.
+function announceFinished(next) {
+  for (const build of next) {
+    if (!watchedBuilds.has(build.id) || isRunning(build)) continue;
+    watchedBuilds.delete(build.id);
+
+    if (build.status === "done") {
+      readyFlashUntil = Date.now() + 3000;
+      setTimeout(updateFigmaButton, 3100);
+      if (!window.open(build.figmaUrl, "_blank")) openBuilds();
+    } else if (build.status === "error") {
+      openBuilds();
+    }
+  }
+  next.filter(isRunning).forEach((build) => watchedBuilds.add(build.id));
+}
+
+async function refreshBuilds() {
+  let next;
+  try {
+    next = await (await fetch("/api/figma-builds")).json();
+  } catch {
+    return;
+  }
+
+  announceFinished(next);
+  builds = next;
+  renderBuilds();
+  updateFigmaButton();
+
+  const running = builds.some(isRunning);
+  if (running && !buildsTimer) buildsTimer = setInterval(refreshBuilds, 2000);
+  if (!running && buildsTimer) {
+    clearInterval(buildsTimer);
+    buildsTimer = null;
+  }
+}
+
+async function cancelBuild(id) {
+  await fetch(`/api/figma-build/${id}/cancel`, { method: "POST" });
+  refreshBuilds();
+}
+
 async function submitFigmaUrl() {
   const figmaUrl = document.getElementById("figma-url-input").value.trim();
   closeFigmaModal();
 
   const selectedItems = items.filter((item) => selected.has(item.id));
-  const startedAt = Date.now();
   saveFigmaBtn.disabled = true;
   saveFigmaBtn.textContent = "Starting…";
 
-  let label = "Failed";
   try {
-    const start = await fetch("/api/figma-build", {
+    const res = await fetch("/api/figma-build", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ images: selectedItems, figmaUrl: figmaUrl || null }),
     });
-    const { jobId, error } = await start.json();
-    if (!start.ok) throw new Error(error);
-
-    for (;;) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const job = await (await fetch(`/api/figma-build/${jobId}`)).json();
-      if (job.status === "running") {
-        const minutes = Math.floor((Date.now() - startedAt) / 60000);
-        saveFigmaBtn.textContent = `${job.step}…${minutes ? ` ${minutes} min` : ""}`;
-      } else if (job.status === "done") {
-        label = "✓ Figma file ready";
-        window.open(job.figmaUrl, "_blank");
-        break;
-      } else {
-        throw new Error(job.error);
-      }
-    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    watchedBuilds.add(data.jobId);
   } catch (err) {
-    console.error(err);
-    alert(`Couldn't build the Figma file.\n\n${err.message}`);
+    alert(`Couldn't start the Figma build.\n\n${err.message}`);
   }
 
-  saveFigmaBtn.textContent = label;
-  setTimeout(() => {
-    saveFigmaBtn.disabled = false;
-    saveFigmaBtn.textContent = "Save for Figma";
-  }, 3000);
+  refreshBuilds();
 }
 
 function saveForFigma() {
@@ -618,6 +757,14 @@ clearBtn.addEventListener("click", () => {
 });
 saveFigmaBtn.addEventListener("click", saveForFigma);
 checkInboxBtn.addEventListener("click", checkInbox);
+buildsBtn.addEventListener("click", openBuilds);
+document.getElementById("builds-close").addEventListener("click", closeBuilds);
+buildsModal.addEventListener("click", (e) => {
+  if (e.target === buildsModal) closeBuilds();
+});
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !buildsModal.hidden) closeBuilds();
+});
 saveClaudeBtn.addEventListener("click", saveForClaude);
 indexToggle.addEventListener("click", toggleIndexDrawer);
 
@@ -682,3 +829,11 @@ document.addEventListener("click", (e) => {
 });
 
 loadGallery();
+refreshBuilds();
+fetch("/api/inbox-status")
+  .then((res) => res.json())
+  .then((status) => {
+    if (status.enriching) watchInbox();
+    else if (status.pending && status.error) checkInboxBtn.title = `${status.pending} item(s) still need descriptions: ${status.error}`;
+  })
+  .catch(() => {});

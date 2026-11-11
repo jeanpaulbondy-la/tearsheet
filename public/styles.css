@@ -1198,46 +1198,115 @@ a {
   justify-content: flex-end;
 }
 
-.processing-dialog {
-  text-align: center;
+/* ---- Figma builds ---- */
+
+.builds-btn {
+  position: relative;
 }
 
-.figma-icon {
-  margin: 0 auto 20px;
-  display: block;
-  opacity: 0.8;
+.builds-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: builds-pulse 1.4s var(--ease) infinite;
 }
 
-.figma-part-1, .figma-part-2, .figma-part-3, .figma-part-4, .figma-part-5 {
-  fill: var(--accent);
-  transform-origin: 12px 12px;
-  animation: figma-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.builds-dot[hidden] {
+  display: none;
 }
 
-.figma-part-1 { animation-delay: 0s; }
-.figma-part-2 { animation-delay: 0.2s; }
-.figma-part-3 { animation-delay: 0.4s; }
-.figma-part-4 { animation-delay: 0.6s; }
-.figma-part-5 { animation-delay: 0.8s; }
-
-@keyframes figma-pulse {
-  0%, 100% {
-    opacity: 0.3;
-  }
+@keyframes builds-pulse {
   50% {
-    opacity: 1;
+    opacity: 0.25;
   }
 }
 
-.processing-dialog h2 {
-  margin-top: 0;
-  margin-bottom: 12px;
+.builds-dialog {
+  max-width: 560px;
 }
 
-.processing-note {
+.builds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 55vh;
+  margin: 0 0 20px;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.builds-empty {
+  margin: 0 0 20px;
+}
+
+.build {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.build-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.build-title {
   font-size: 13px;
+  color: var(--ink);
+}
+
+.build-status {
+  font-family: var(--mono);
+  font-size: 11px;
   color: var(--ink-2);
-  margin: 16px 0;
+  white-space: nowrap;
+}
+
+.build-done .build-status {
+  color: var(--accent);
+}
+
+.build-error .build-status {
+  color: #e5675c;
+}
+
+.build-meta,
+.build-error-text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+.build-error-text {
+  color: var(--ink-2);
+}
+
+.build-actions {
+  display: flex;
+  gap: 14px;
+}
+
+.build-actions a,
+.build-actions button {
+  padding: 0;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.build-actions a:hover,
+.build-actions button:hover {
+  text-decoration: underline;
 }
 
 @media (prefers-reduced-motion: reduce) {

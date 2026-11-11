@@ -18,3 +18,4 @@ images/*
 inbox/*
 !inbox/.gitkeep
 .tearsheet-figma-build.log
+data/figma-builds.json

@@ -3,8 +3,8 @@
 
 const { spawn } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { findClaude, blockedReason, LOGIN_HINT, AUTH_ERROR } = require("./claude-cli");
 
 const ROOT = path.resolve(__dirname, "..");
 const IMAGES_DIR = path.join(ROOT, "images");
@@ -26,25 +26,7 @@ const STEP_LABELS = {
 const SETUP_HINT =
   `Figma isn't connected to Claude Code yet. Run \`npm run setup -- --figma\`, then run \`claude\` once, ` +
   `type /mcp, and sign in to "${FIGMA_MCP}".`;
-const LOGIN_HINT = "Claude Code needs you to sign in again. Run `claude` in Terminal and type /login, then try again.";
 const SIGN_IN_HINT = `Figma needs a one-time sign-in. Run \`claude\` in Terminal, type /mcp, choose "${FIGMA_MCP}", and approve access in the browser. Then try again.`;
-
-function findClaude() {
-  const candidates = [
-    ...(process.env.PATH || "").split(path.delimiter).map((d) => path.join(d, "claude")),
-    path.join(os.homedir(), ".local", "bin", "claude"),
-    "/opt/homebrew/bin/claude",
-    "/usr/local/bin/claude",
-  ];
-  return candidates.find((p) => {
-    try {
-      fs.accessSync(p, fs.constants.X_OK);
-      return true;
-    } catch {
-      return false;
-    }
-  });
-}
 
 function buildPrompt(images, figmaUrl) {
   const skill = fs.readFileSync(SKILL_FILE, "utf8").replace(/^---[\s\S]*?---\s*/, "");
@@ -109,21 +91,20 @@ function stepFromEvent(event) {
   return STEP_LABELS[name] || "Working";
 }
 
-function runFigmaBuild(images, figmaUrl, job) {
-  const fail = (error) => {
-    job.status = "error";
-    job.error = error;
+// Runs one build. `job` is updated in place and `onUpdate` is called after every change,
+// so the caller can persist it. `job.cancel()` stops a running build.
+function runFigmaBuild(images, figmaUrl, job, onUpdate = () => {}) {
+  const finish = (status, fields = {}) => {
+    if (job.status !== "running") return;
+    Object.assign(job, { status, finishedAt: Date.now(), ...fields });
+    onUpdate();
   };
+  const fail = (error) => finish("error", { error });
 
-  if (process.env.CLAUDECODE) {
-    return fail("Tearsheet was started inside Claude Code, which can't launch another Claude session. Start it with Tearsheet.app or `npm start` in Terminal.");
-  }
+  const blocked = blockedReason();
+  if (blocked) return fail(blocked);
 
   const claude = findClaude();
-  if (!claude) {
-    return fail("Claude Code isn't installed. Install it from https://claude.com/claude-code, then try again.");
-  }
-
   const child = spawn(
     claude,
     [
@@ -136,6 +117,11 @@ function runFigmaBuild(images, figmaUrl, job) {
     ],
     { cwd: ROOT, stdio: ["pipe", "pipe", "pipe"] }
   );
+
+  job.cancel = () => {
+    finish("cancelled");
+    child.kill("SIGTERM");
+  };
 
   let finalText = "";
   let sawFigmaUrl = null;
@@ -173,7 +159,10 @@ function runFigmaBuild(images, figmaUrl, job) {
     logEvent(event);
 
     const step = stepFromEvent(event);
-    if (step) job.step = step;
+    if (step && step !== job.step) {
+      job.step = step;
+      onUpdate();
+    }
 
     if (event.type === "result") finalText = event.result || "";
   }
@@ -194,16 +183,15 @@ function runFigmaBuild(images, figmaUrl, job) {
   child.on("close", () => {
     clearTimeout(timer);
     handleLine(buffer);
-    if (job.status === "error") return;
+    if (job.status !== "running") return;
 
     const urls = finalText.match(FIGMA_URL);
     const url = (urls && urls[urls.length - 1]) || sawFigmaUrl || figmaUrl;
     if (url) {
-      job.status = "done";
-      job.figmaUrl = url;
+      finish("done", { figmaUrl: url });
     } else {
       const said = finalText.trim() || stderr.trim();
-      fail(/authenticate|oauth|\/login|not logged in/i.test(said) ? LOGIN_HINT : said.slice(0, 400) || "Claude finished without creating a Figma file.");
+      fail(AUTH_ERROR.test(said) ? LOGIN_HINT : said.slice(0, 400) || "Claude finished without creating a Figma file.");
     }
   });
 

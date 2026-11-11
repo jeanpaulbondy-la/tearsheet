@@ -28,6 +28,7 @@
 
     <div class="topbar-right">
       <p class="byline"><a href="https://jbondy.com" target="_blank" rel="noopener">Created by Jean-Paul Bondy 2026</a></p>
+      <button id="builds-btn" type="button" class="inbox-btn builds-btn">Builds<span id="builds-dot" class="builds-dot" hidden></span></button>
       <button id="check-inbox" type="button" class="inbox-btn">Check inbox</button>
       <button id="index-toggle" type="button" class="index-toggle" aria-expanded="false" aria-controls="index">Index</button>
     </div>
@@ -92,6 +93,17 @@
       <div class="lightbox-frame"></div>
     </div>
     <aside id="detail-panel" class="detail-panel"></aside>
+  </div>
+
+  <div id="builds-modal" class="modal-overlay" hidden>
+    <div class="modal-dialog builds-dialog" role="dialog" aria-labelledby="builds-title">
+      <h2 id="builds-title">Figma builds</h2>
+      <ul id="builds-list" class="builds-list"></ul>
+      <p id="builds-empty" class="builds-empty">No builds yet. Select references and click Save for Figma.</p>
+      <div class="modal-actions">
+        <button id="builds-close" type="button" class="btn-ghost">Close</button>
+      </div>
+    </div>
   </div>
 
   <div id="figma-modal" class="modal-overlay" hidden>
