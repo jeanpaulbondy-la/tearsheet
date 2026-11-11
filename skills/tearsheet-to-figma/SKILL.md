@@ -64,7 +64,13 @@ Propose a semantic layer for the roles that map to a stable single hue: `color/b
 
 **Tints/opacity recipes are internal build material only** — they exist to give components more to work with. Never surface them (or any color/typography output from this skill) back on a Tearsheet gallery card; the card always shows just the 6 raw extracted colors, unrelated to this file.
 
-**On the Foundations page** (Step 5), document color two ways: (1) the semantic swatch row — one swatch per semantic token, bound, labeled with **both** its token path and natural name, e.g. `color/accent/primary` / `Coral` (the path alone forces anyone reading the file to go look it up); (2) per-primitive opacity documentation — for each primitive, one large 100%-opacity bound swatch, and a row of smaller unbound swatches underneath at fixed opacity steps (e.g. 90/75/60/45/30/15%), each labeled with its percentage. This is what actually proves the tint mechanism works, since the mechanism itself can't be inspected by looking at the variables panel (there's nothing to bind).
+**Show the HEX value of every color, everywhere a color is documented.** A designer must be able to read the code off the page without opening the variables panel or the eyedropper. Write each as uppercase `#RRGGBB` in the Mono text style, computed from the color you actually applied (convert the resolved RGB to hex in code, never retype it from memory, so the label cannot disagree with the swatch). Do this in four places:
+1. **Foundations swatches.** Every swatch label has three lines: token path, natural name, hex (e.g. `color/accent/primary` / `Indigo` / `#573ABF`). A semantic token shows the hex of the primitive it aliases. A primitive's heading includes its hex. A computed state color (hover, pressed) shows its computed hex. An opacity recipe shows its base hex and percentage (e.g. `mist @ 70% · #D6D9DF`).
+2. **The variables themselves.** Set each variable's `description`: a primitive gets its hex (`#573ABF`); a semantic variable gets its alias and hex (`primitive/indigo · #573ABF`). That way the hex also shows in the variables panel and in Dev Mode.
+3. **The References page.** Under each reference image, show that image's six extracted palette colors from its `palette` array: a row of small swatches plus a Mono text line of the hexes, three per line.
+4. **The final report** (Step 6) lists the primitive palette as natural name plus hex.
+
+**On the Foundations page** (Step 5), document color two ways: (1) the semantic swatch row — one swatch per semantic token, bound, labeled as described above, e.g. `color/accent/primary` / `Coral` / `#F26B5B` (the path alone forces anyone reading the file to go look it up); (2) per-primitive opacity documentation — for each primitive, one large 100%-opacity bound swatch with its hex, and a row of smaller unbound swatches underneath at fixed opacity steps (e.g. 90/75/60/45/30/15%), each labeled with its percentage. This is what actually proves the tint mechanism works, since the mechanism itself can't be inspected by looking at the variables panel (there's nothing to bind).
 
 **4b. Typography** — From any image with legible type (UI sources, plus type-specimen-style mood images), describe what you see (serif/sans/mono, weight, tracking, mood). Pick the closest real Figma font per role — up to three roles: Heading, Body, Mono — verifying exact family/style strings with `listAvailableFontsAsync`. Name the resulting text styles to flag the approximation, e.g. `Heading/Serif (approx. Georgia)`. Never imply an exact font match.
 
@@ -121,7 +127,7 @@ return bad;
 ```
 
 1. **Foundations call.** Create the pages (Cover, Foundations, References, Components) and bind every page background to `color/bg/primary`. Create the primitive variables, the semantic variables (aliased, with explicit scopes, never `ALL_SCOPES`), and the three text styles. Build the Foundations page: a semantic swatch row (each labeled with token path and natural name), per-primitive opacity rows, the type specimens, and the state and status color notes. Return any node IDs you need later.
-2. **References call.** One rectangle plus caption per selected image, stating what it contributed (palette, typography, which component). Then upload the real images into those rectangles (the headless instructions above say how; interactively, use `upload_assets`).
+2. **References call.** One rectangle plus caption per selected image, stating what it contributed (palette, typography, which component), and under each one its six extracted palette colors as small swatches with their hex values (see "Show the HEX value of every color"). Then upload the real images into those rectangles (the headless instructions above say how; interactively, use `upload_assets`).
 3. **Component calls.** One `use_figma` call per component family (two families per call only if both are tiny). In each: load every font first; build the base component with auto layout and token-bound fills, strokes, and text styles; create one variant per state or kind; `combineAsVariants`; name the set and its properties; place the set in a labeled grid on the Components page with a section label above it. Check each call's returned node IDs instead of taking a screenshot.
 4. **Final check.** Take one `get_screenshot` per page with `enableBase64Response: true` (a headless run cannot download the default link, so without that flag you never see the page). Look at each image. Fix anything visibly broken (clipped or empty swatches, overlapping layers, unreadable text, empty image fills) and re-run the overflow check. Never report the build as checked if you did not actually see the screenshots.
 
@@ -131,7 +137,7 @@ Text placed on a page or inside a component always uses one of the text styles, 
 
 ## Step 6 — Report results
 
-Give the user: the new Figma file URL, a short breakdown of which source image contributed which tokens/components, which candidate components were built vs. left out and why, and an explicit note that typography and component shapes are Claude's closest approximation of the references, not exact extraction.
+Give the user: the new Figma file URL, the primitive color palette as natural name plus hex, a short breakdown of which source image contributed which tokens/components, which candidate components were built vs. left out and why, and an explicit note that typography and component shapes are Claude's closest approximation of the references, not exact extraction.
 
 ## Notes
 
