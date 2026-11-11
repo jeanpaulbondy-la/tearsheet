@@ -26,6 +26,7 @@ const STEP_LABELS = {
 const SETUP_HINT =
   `Figma isn't connected to Claude Code yet. Run \`npm run setup -- --figma\`, then run \`claude\` once, ` +
   `type /mcp, and sign in to "${FIGMA_MCP}".`;
+const LOGIN_HINT = "Claude Code needs you to sign in again. Run `claude` in Terminal and type /login, then try again.";
 const SIGN_IN_HINT = `Figma needs a one-time sign-in. Run \`claude\` in Terminal, type /mcp, choose "${FIGMA_MCP}", and approve access in the browser. Then try again.`;
 
 function findClaude() {
@@ -201,7 +202,8 @@ function runFigmaBuild(images, figmaUrl, job) {
       job.status = "done";
       job.figmaUrl = url;
     } else {
-      fail(finalText.trim().slice(0, 400) || stderr.trim().slice(0, 400) || "Claude finished without creating a Figma file.");
+      const said = finalText.trim() || stderr.trim();
+      fail(/authenticate|oauth|\/login|not logged in/i.test(said) ? LOGIN_HINT : said.slice(0, 400) || "Claude finished without creating a Figma file.");
     }
   });
 
