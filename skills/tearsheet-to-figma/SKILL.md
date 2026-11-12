@@ -1,15 +1,15 @@
 ---
 name: tearsheet-to-figma
-description: Turn the user's saved Tearsheet selection into a new Figma starter kit — color variables, approximate typography styles, and (if any selected image looks like real UI) a working baseline of token-bound components. Automatically checks for a saved selection from the Tearsheet app, or guides the user to create one. Use when the user says things like "turn my tearsheet selection into a figma file", "build a figma starter kit from my references", or "/tearsheet-to-figma".
+description: Turn the user's saved Tearsheet selection into a new Figma starter kit — color variables, approximate typography styles, and (if any selected image looks like real UI) a full set of token-bound component families with their state variants. Automatically checks for a saved selection from the Tearsheet app, or guides the user to create one. Use when the user says things like "turn my tearsheet selection into a figma file", "build a figma starter kit from my references", or "/tearsheet-to-figma".
 ---
 
 # Tearsheet → Figma Starter Kit
 
-Builds a new Figma file from the images the user selected in Tearsheet: real extracted colors as variables, an approximate type ramp, and — only where the source images actually show UI — a small set of working components.
+Builds a new Figma file from the images the user selected in Tearsheet: real extracted colors as variables, an approximate type ramp, and — only where the source images actually show UI — a set of component families with state variants.
 
 This skill is designed for the hybrid workflow: the user selects images in the Tearsheet web app (http://localhost:4560), saves their selection, then manually runs this skill in Claude Code. The skill automatically checks for a saved selection and offers to use it; if none exists, it guides you to Tearsheet first.
 
-This is heavier than `/use-tearsheet`: it needs Figma auth and makes a dozen or so tool calls. Default scope is a **fast baseline** for the designer to iterate on: color and type foundations with hex values, the real reference images, and one working component per UI pattern the references show (up to 8). It deliberately omits variant matrices, component sets, light/dark modes, and accessibility audits unless the user explicitly asks.
+This is heavier than `/use-tearsheet`: it needs Figma auth and makes a dozen or so tool calls. Default scope is a **complete starter kit**: color and type foundations, the real reference images, and up to 14 component families, led by the components the references actually show,, each with its states and kinds as variants. It is not a full production design system (no light/dark modes or accessibility audit) unless the user explicitly asks.
 
 ## Preamble — Check for saved selection
 
@@ -47,44 +47,72 @@ If **zero** images classify as UI sources: say so plainly, and only do Step 4a (
 
 **4a. Color** — Pool the `palette` array from every selected image (UI and mood sources both count). Dedupe near-duplicate hexes down to a reasonable primitive set (typically 4–8 base colors). You'll create each as a single Figma primitive variable named `primitive/<natural-color-name>` (e.g. `primitive/coral`, `primitive/seafoam`). **The name must be something a designer or developer would actually say out loud** — a real color/mood word (coral, seafoam, rust, dusk, ink, sand, acid, slate), never a placeholder like "color1," "accent-orange," or the raw hex. Pick it by looking at the swatch, not by category.
 
-**No tint ramps.** Don't generate lighter or darker copies of a color as separate variables. If a dimmed role is needed (secondary text, a subtle border), apply the primitive as an **unbound** paint with an opacity at the point of use. One hard Figma constraint: Figma silently resets a paint's `opacity` to 1 if that paint's color is bound to a variable, so set `paint.opacity` after calling `setBoundVariableForPaint`, or use an unbound paint.
+**Tints are opacity variants, not mixed-toward-white/black hexes.** Earlier versions of this skill generated a 50–900 lighten/darken ramp per color as separate bindable variables — don't do that. Instead, "Coral at 60%" is literally `primitive/coral` rendered at 60% opacity, the same way `text-white/60` works in Tailwind. This is simpler and reads better to designers, but it comes with one hard Figma constraint, discovered by testing this exact thing:
 
-Propose a semantic layer for the roles that map to a stable single hue: `color/bg/primary`, `color/bg/surface`, `color/text/primary`, `color/accent/primary`, `color/accent/secondary` (only if the palette clearly supports two distinct accent hues). Each binds directly to a primitive.
+> **Figma silently resets a paint's `opacity` to `1` if that paint's `color` is bound to a variable.** Confirmed by setting `opacity: 0.3` on a variable-bound paint, then re-querying the node fresh — it read back `1`, not `0.3`, even though the immediate in-script readback misleadingly showed `0.3`. Always re-query a node in a *separate* script after any opacity-sensitive change before trusting it — the same script that made the change can report stale/optimistic state.
+
+Practical consequence — two different mechanisms for two different needs:
+- **A token that must stay a real, reusable, bindable variable** (e.g. `color/accent/primary` itself) → bind its color to the primitive, full opacity, no dimming. This is what most semantic tokens should be.
+- **A "dimmed" role** (secondary text, a subtle border, a hover state) → do **not** try to make this a bindable semantic variable at all. Apply it directly at each point of use as an **unbound** flat paint: `{ type: "SOLID", color: <primitive's plain RGB, no binding>, opacity: <0.15–0.9> }`. Document the recipe (e.g. "text/secondary = cream primitive, 70% opacity") in your build notes and the Foundations page — see below — but don't create a Figma variable for it, since it can't hold real opacity anyway.
+- If you do bind a color to a paint and *also* need custom opacity on that same paint, set `paint.opacity` **after** calling `setBoundVariableForPaint`, on the object it returns — setting it before gets silently discarded by that call.
+
+Propose a semantic layer for the roles that map to a stable single hue: `color/bg/primary`, `color/bg/surface`, `color/text/primary`, `color/accent/primary`, `color/accent/secondary` (only if the palette clearly supports two distinct accent hues) — these bind directly to a primitive, one role one hue, no dimming involved. Don't invent a semantic variable for roles that are actually "primitive + opacity" recipes (`text/secondary`, `accent/primary-hover`, `border/default`) — document those as recipes instead, per above.
 
 **Check contrast before deciding `color/text/on-accent`.** Don't default to white/cream — extracted accent hues are frequently light-to-medium tones (a coral or a sky blue, not a deep saturated one), and light text on a light-medium accent fails contrast. Look at the actual accent hex's lightness and pick whichever of your ink/cream-equivalent primitives actually contrasts. Same logic for any other fill that will host text or icons directly.
 
 **Default to a dark theme (dark bg, light text) unless the pooled palette clearly reads as light-first.** `color/bg/primary`/`color/bg/surface` → your darkest neutral primitives; `color/text/primary` → your lightest. This is the expected default for these builds — confirm with the user only if the palette is ambiguous or they've asked for something specific.
 
-**Never surface any color or typography output from this skill back on a Tearsheet gallery card;** the card always shows just the 6 raw extracted colors, unrelated to this file.
+**Tints/opacity recipes are internal build material only** — they exist to give components more to work with. Never surface them (or any color/typography output from this skill) back on a Tearsheet gallery card; the card always shows just the 6 raw extracted colors, unrelated to this file.
 
 **Show the HEX value of every color, everywhere a color is documented.** A designer must be able to read the code off the page without opening the variables panel or the eyedropper. Write each as uppercase `#RRGGBB` in the Mono text style, computed from the color you actually applied (convert the resolved RGB to hex in code, never retype it from memory, so the label cannot disagree with the swatch). Do this in four places:
-1. **Foundations swatches.** Every swatch label has three lines: token path, natural name, hex (e.g. `color/accent/primary` / `Indigo` / `#573ABF`). A semantic token shows the hex of the primitive it aliases. A primitive's heading includes its hex.
+1. **Foundations swatches.** Every swatch label has three lines: token path, natural name, hex (e.g. `color/accent/primary` / `Indigo` / `#573ABF`). A semantic token shows the hex of the primitive it aliases. A primitive's heading includes its hex. A computed state color (hover, pressed) shows its computed hex. An opacity recipe shows its base hex and percentage (e.g. `mist @ 70% · #D6D9DF`).
 2. **The variables themselves.** Set each variable's `description`: a primitive gets its hex (`#573ABF`); a semantic variable gets its alias and hex (`primitive/indigo · #573ABF`). That way the hex also shows in the variables panel and in Dev Mode.
 3. **The References page.** Under each reference image, show that image's six extracted palette colors from its `palette` array: a row of small swatches plus a Mono text line of the hexes, three per line.
 4. **The final report** (Step 6) lists the primitive palette as natural name plus hex.
 
+**On the Foundations page** (Step 5), document color two ways: (1) the semantic swatch row — one swatch per semantic token, bound, labeled as described above, e.g. `color/accent/primary` / `Coral` / `#F26B5B` (the path alone forces anyone reading the file to go look it up); (2) per-primitive opacity documentation — for each primitive, one large 100%-opacity bound swatch with its hex, and a row of smaller unbound swatches underneath at fixed opacity steps (e.g. 90/75/60/45/30/15%), each labeled with its percentage. This is what actually proves the tint mechanism works, since the mechanism itself can't be inspected by looking at the variables panel (there's nothing to bind).
+
 **4b. Typography** — From any image with legible type (UI sources, plus type-specimen-style mood images), describe what you see (serif/sans/mono, weight, tracking, mood). Pick the closest real Figma font per role — up to three roles: Heading, Body, Mono — verifying exact family/style strings with `listAvailableFontsAsync`. Name the resulting text styles to flag the approximation, e.g. `Heading/Serif (approx. Georgia)`. Never imply an exact font match.
 
-**4c. Components** — The goal is a fast, working **baseline** for the designer to iterate on, not a complete component library. **The baseline must be recognizably built from what the sources show.** If the references are chat apps, it has chat components; if they are audio plugins, it has knobs and faders; a generic button/input/toggle set that ignores the subject is a failed build.
+**4c. Components** — Build a real starter kit, not a generic sampler. **The kit must be recognizably built from what the sources show.** If the references are chat apps, the kit has chat components; if they are smart-home dashboards, it has device controls; a generic button/input/toggle set that ignores the subject is a failed build.
 
-1. **Inventory from the selection.** The selection's `description`, `tags`, and `category` already say what each UI source contains; use them to list the specific UI patterns by their real names (for example chat bubble, message input bar, conversation row, avatar, rotary knob, vertical fader, level meter, payment card, metric tile, settings row, nav bar). Only view an image with the Read tool if its description doesn't make the patterns clear. Do not write the inventory out at length.
-2. **One working component per pattern.** Pick the **most prominent and distinctive patterns first** (domain patterns before generic ones). Build **up to 8**. Fill with a generic essential (button, input) only if the sources actually show one and there is room. If the inventory is longer, build the top 8 and name what you left out in the report.
-3. **Keep each component simple.** A single real Figma component (auto layout, fills and strokes bound to the color variables, text on the text styles, realistic content). Add a second variant **only when the pattern is defined by exactly two states** (a toggle on/off, a tab active/inactive, a bubble incoming/outgoing). Do **not** build hover, pressed, or disabled matrices, size variants, or component sets for completeness; the designer will add those.
+1. **Inventory first.** For every UI-source image, view it with the Read tool and list the specific components it contains, by their real names: for example chat bubble (incoming, outgoing), message input bar, voice-message player, typing indicator, conversation list row, avatar with presence dot, profile header, settings row, device control card, metric or stat tile, chart tile, bottom nav bar, segmented control, search field, notification badge. Include domain patterns, not just the basics. Write the inventory out before building.
+2. **Domain components come first.** Rank the inventory by how often a pattern appears across the selected images and how central it is to the subject, and build those first. Reserve **at most half** of the families for generic essentials, and only to fill gaps the sources don't already cover (button, input, toggle, checkbox, badge, alert, card, tab).
+3. **Size.** Up to **14 families** in total. If the inventory is longer, build the highest-ranked and say in your final report which patterns were left out.
 
 If there are no UI sources (all mood or palette references), build no components, as described in Step 2.
 
-Add a semantic status token (`color/status/success`, `warning`, or `danger`, aliasing a primitive from the palette) **only if a component you build uses it.**
+**Every family is a component set with variants, not a single component.** Cover the states and kinds that family really has:
+- Button: Type (primary, secondary, ghost, destructive) × State (default, hover, pressed, disabled)
+- Input: State (default, focused, filled, error, disabled)
+- Toggle: Value (off, on) × State (default, disabled)
+- Checkbox and radio: Value (unchecked, checked) × State (default, disabled)
+- Badge: Kind (neutral, accent, success, warning, danger)
+- Alert or toast: Kind (info, success, warning, danger)
+- Card: State (default, hover, selected, disabled)
+- Tab or nav item: State (inactive, active, disabled)
+- Chat bubble: Direction (incoming, outgoing) × Kind (text, image, voice) × State (default, sending, failed)
+- Message input bar: State (empty, typing, recording, disabled)
+- Conversation list row: State (default, unread, selected, muted)
+- Avatar: Presence (online, away, offline, none) × Size
+- Settings row: Kind (navigation, toggle, destructive) × State (default, disabled)
+- Metric or stat tile, device control card, chart tile: State (default, active, inactive, alert)
+- Anything else: its natural states (default, hover, pressed, selected, disabled, error)
+
+Use real Figma variant properties (`combineAsVariants`) named `State`, `Type`, `Kind`, `Value`, so each is switchable in the properties panel.
+
+**Status and state colors.** Add semantic tokens `color/status/success`, `color/status/warning`, `color/status/danger`, `color/status/info`, and `color/text/on-status`, each aliasing a primitive. Use the palette's own hues where one fits (a red-leaning coral for danger, a green-leaning teal for success); where none does, add a muted primitive tuned to the palette's saturation and lightness so it doesn't clash. Name each one naturally. State colors follow the opacity constraint above: hover is the accent RGB lightened about 8% and pressed is darkened about 12%, both as unbound flat fills documented on the Foundations page; disabled is the component's layer `opacity` set to 0.4 (layer opacity is safe, unlike paint opacity on a bound paint); focused is a 2px outline stroke in `color/accent/primary`; error is a stroke in `color/status/danger`.
 
 ## Step 5 — Build the file
 
-**Speed is the priority: a working baseline in a few minutes.** Do not deliberate over choices; pick and build. Load the `figma-use` skill (or the Figma MCP's `get_figma_skill` tool if the skill isn't available) for the Plugin API conventions. Then build with **a few large `use_figma` calls** (about five in total). Never screenshot per component. In an interactive session, state the plan in one line and proceed without asking permission.
+Load the `figma-use` skill (or the Figma MCP's `get_figma_skill` tool if the skill isn't available) for the Plugin API conventions. Then build with a handful of large `use_figma` calls: not dozens of tiny ones, and not one giant one. Never screenshot per component. In an interactive session, state the plan in one line and proceed without asking permission.
 
 **Layout rules for every page you build.** These exist because earlier builds produced swatch rows collapsed to 10px tall, with the swatches and their labels clipped out of sight.
-- **Never use `layoutWrap = "WRAP"`.** A wrapped auto-layout frame keeps its old height through the plugin API, so wrapped rows spill out of it and get clipped. For any grid (swatches, components), split the items into rows of at most 6 and stack the rows in a vertical auto-layout frame.
+- **Never use `layoutWrap = "WRAP"`.** A wrapped auto-layout frame keeps its old height through the plugin API, so wrapped rows spill out of it and get clipped. For any grid (swatches, primitives, component sets), split the items into rows of at most 6 and stack the rows in a vertical auto-layout frame.
 - **Set `clipsContent = false`** on every container frame on the Foundations, References, and Components pages.
 - **Stack sections with auto-layout** (a vertical frame with a gap), never by hand-computing y positions, so a section cannot land on top of the next one.
 - Set `layoutSizingHorizontal` and `layoutSizingVertical` (HUG or FIXED) **after** appending children. A frame made with `createAutoLayout()` starts with a white fill, so set `fills = []` unless it needs one.
-- **Overflow check.** After building each page, run this in a `use_figma` call and fix every entry it returns (resize the parent or re-lay-out the children):
+- **Overflow check.** After building each page, run this in a `use_figma` call and fix every entry it returns (resize the parent or re-lay-out the children) before moving on:
 
 ```js
 const bad = [];
@@ -98,18 +126,18 @@ const bad = [];
 return bad;
 ```
 
-1. **Foundations call.** Create the pages (Cover, Foundations, References, Components) and set every page background to `color/bg/primary`. Create the primitive variables, the semantic variables (aliased, with explicit scopes, never `ALL_SCOPES`), and the three text styles. Build the Foundations page: a primitive swatch row and a semantic swatch row (each swatch labeled with token path, natural name, and hex), and the type specimens. Return any node IDs you need later.
+1. **Foundations call.** Create the pages (Cover, Foundations, References, Components) and bind every page background to `color/bg/primary`. Create the primitive variables, the semantic variables (aliased, with explicit scopes, never `ALL_SCOPES`), and the three text styles. Build the Foundations page: a semantic swatch row (each labeled with token path and natural name), per-primitive opacity rows, the type specimens, and the state and status color notes. Return any node IDs you need later.
 2. **References call.** One rectangle plus caption per selected image, stating what it contributed (palette, typography, which component), and under each one its six extracted palette colors as small swatches with their hex values (see "Show the HEX value of every color"). Then upload the real images into those rectangles (the headless instructions above say how; interactively, use `upload_assets`).
-3. **Components call(s).** Build all the components in one `use_figma` call, or two if the code would be very long. Load every font first. Place the components in a labeled grid on the Components page, a short label above each.
-4. **Final check.** Run the overflow check on all three pages in a single call, then take one `get_screenshot` per page with `enableBase64Response: true` (a headless run cannot download the default link, so without that flag you never see the page). Look at each image and fix anything visibly broken (clipped or empty swatches, overlapping layers, unreadable text, empty image fills) in a single follow-up call. Never report the build as checked if you did not actually see the screenshots.
+3. **Component calls.** One `use_figma` call per component family (two families per call only if both are tiny). In each: load every font first; build the base component with auto layout and token-bound fills, strokes, and text styles; create one variant per state or kind; `combineAsVariants`; name the set and its properties; place the set in a labeled grid on the Components page with a section label above it. Check each call's returned node IDs instead of taking a screenshot.
+4. **Final check.** Take one `get_screenshot` per page with `enableBase64Response: true` (a headless run cannot download the default link, so without that flag you never see the page). Look at each image. Fix anything visibly broken (clipped or empty swatches, overlapping layers, unreadable text, empty image fills) and re-run the overflow check. Never report the build as checked if you did not actually see the screenshots.
 
 Text placed on a page or inside a component always uses one of the text styles, never the default font. Never surface a real brand or product name anywhere in the file.
 
-**If the user asks for more** (variants and states, light/dark modes, every component in the sources), do it, but say that it makes the build much longer.
+**If the user asks for more** (dark/light modes, a full accessibility audit, every component in the sources), do it, but say that it makes the build much longer.
 
 ## Step 6 — Report results
 
-Give the user: the new Figma file URL, the primitive color palette as natural name plus hex, a short breakdown of which source image contributed which tokens/components, which UI patterns were built vs. left out, and an explicit note that typography and component shapes are Claude's closest approximation of the references, not exact extraction.
+Give the user: the new Figma file URL, the primitive color palette as natural name plus hex, a short breakdown of which source image contributed which tokens/components, which candidate components were built vs. left out and why, and an explicit note that typography and component shapes are Claude's closest approximation of the references, not exact extraction.
 
 ## Notes
 
