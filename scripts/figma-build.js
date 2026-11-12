@@ -16,11 +16,12 @@ const FIGMA_MCP_URL = "https://mcp.figma.com/mcp";
 // Builds get exactly one MCP server. Nothing else the user has connected (mail, drive, calendar) is loaded.
 const MCP_CONFIG = JSON.stringify({ mcpServers: { [FIGMA_MCP]: { type: "http", url: FIGMA_MCP_URL } } });
 const TIMEOUT_MS = 30 * 60 * 1000;
-// Most of a build is Claude thinking and writing code, not Figma. A lower effort and a smaller model are much
-// faster but build fewer components, so both are opt-in: set TEARSHEET_MODEL (e.g. "sonnet") and TEARSHEET_EFFORT
-// (e.g. "low") to trade breadth for speed. Unset means Claude Code's defaults.
-const MODEL = process.env.TEARSHEET_MODEL;
-const EFFORT = process.env.TEARSHEET_EFFORT;
+// Most of a build is Claude thinking and writing code, not Figma, so speed comes from less thinking. Measured on the
+// same four references: Opus at default effort took 575s; Sonnet at low effort took 160s. Tearsheet's goal is a fast
+// baseline to iterate on, so the fast settings are the default. Set TEARSHEET_MODEL / TEARSHEET_EFFORT to override,
+// or to an empty string to use Claude Code's own defaults.
+const MODEL = process.env.TEARSHEET_MODEL ?? "sonnet";
+const EFFORT = process.env.TEARSHEET_EFFORT ?? "low";
 const FIGMA_URL = /https:\/\/www\.figma\.com\/(?:design|file)\/[A-Za-z0-9]+[^\s)>"'\\\]]*/g;
 
 const STEP_LABELS = {
@@ -61,6 +62,7 @@ Overrides to the workflow below:
 - If the figma-use or figma-generate-library skills aren't available, call the Figma MCP's get_figma_skill tool (if it exists) to load its conventions.
 - Reference images must be the real files, not placeholders. upload_assets returns single-use upload URLs and does not read local files, so: (1) in your build script, create one rectangle per reference on the References page and return its node ID; (2) call upload_assets once with count = number of references and nodeIds = those IDs, in order; (3) for each returned upload URL, send the bytes with one Bash call per image, in parallel in a single message. Each call must be exactly this and nothing else, with the file's full absolute path from the selection written inline and its MIME type (image/png, image/jpeg, image/webp, or image/gif): curl -sS -X POST -H "Content-Type: <mime>" --data-binary @<absolute path> "<uploadUrl>". The command must start with the word curl. Do not use shell variables, cd, echo, newlines, ; or &&, and do not combine several uploads into one command, or the call is denied. Only run curl against upload URLs returned by upload_assets. If an upload fails, keep that rectangle as a captioned placeholder and continue.
 - You cannot download files. When you call get_screenshot, always pass enableBase64Response: true so the image comes back inline, and look at it.
+- Speed matters more than completeness. Build a working baseline quickly and do not deliberate over choices.
 - Your last message must contain the final Figma file URL on its own line.
 
 Selection:
