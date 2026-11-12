@@ -12,7 +12,15 @@ const SKILL_FILE = path.join(ROOT, "skills", "tearsheet-to-figma", "SKILL.md");
 
 const BUILD_LOG = path.join(ROOT, ".tearsheet-figma-build.log");
 const FIGMA_MCP = "figma";
+const FIGMA_MCP_URL = "https://mcp.figma.com/mcp";
+// Builds get exactly one MCP server. Nothing else the user has connected (mail, drive, calendar) is loaded.
+const MCP_CONFIG = JSON.stringify({ mcpServers: { [FIGMA_MCP]: { type: "http", url: FIGMA_MCP_URL } } });
 const TIMEOUT_MS = 30 * 60 * 1000;
+// Most of a build is Claude thinking and writing code, not Figma. A lower effort and a smaller model are much
+// faster but build fewer components, so both are opt-in: set TEARSHEET_MODEL (e.g. "sonnet") and TEARSHEET_EFFORT
+// (e.g. "low") to trade breadth for speed. Unset means Claude Code's defaults.
+const MODEL = process.env.TEARSHEET_MODEL;
+const EFFORT = process.env.TEARSHEET_EFFORT;
 const FIGMA_URL = /https:\/\/www\.figma\.com\/(?:design|file)\/[A-Za-z0-9]+[^\s)>"'\\\]]*/g;
 
 const STEP_LABELS = {
@@ -26,7 +34,7 @@ const STEP_LABELS = {
 const SETUP_HINT =
   `Figma isn't connected to Claude Code yet. Run \`npm run setup -- --figma\`, then run \`claude\` once, ` +
   `type /mcp, and sign in to "${FIGMA_MCP}".`;
-const SIGN_IN_HINT = `Figma needs a one-time sign-in. Run \`claude\` in Terminal, type /mcp, choose "${FIGMA_MCP}", and approve access in the browser. Then try again.`;
+const SIGN_IN_HINT = `Figma needs a one-time sign-in. Run \`npm run setup -- --figma\` if you haven't, then run \`claude\` in Terminal, type /mcp, choose "${FIGMA_MCP}", and approve access in the browser. Then try again.`;
 
 function buildPrompt(images, figmaUrl) {
   const skill = fs.readFileSync(SKILL_FILE, "utf8").replace(/^---[\s\S]*?---\s*/, "");
@@ -73,6 +81,10 @@ function logEvent(event) {
     return [];
   });
   if (event.type === "result") {
+    const u = event.usage || {};
+    lines.push(
+      `STATS turns=${event.num_turns} seconds=${Math.round((event.duration_ms || 0) / 1000)} apiSeconds=${Math.round((event.duration_api_ms || 0) / 1000)} outputTokens=${u.output_tokens} cost=$${(event.total_cost_usd || 0).toFixed(2)}`
+    );
     lines.push(`RESULT ${clip(event.result)}`);
     if (event.permission_denials?.length) lines.push(`DENIED ${clip(event.permission_denials)}`);
   }
@@ -113,7 +125,14 @@ function runFigmaBuild(images, figmaUrl, job, onUpdate = () => {}) {
       "--verbose",
       "--no-session-persistence",
       "--permission-mode", "dontAsk",
-      "--allowedTools", `mcp__${FIGMA_MCP}`, "mcp__claude_ai_Figma", "Read", "Bash(curl -sS -X POST:*)",
+      ...(MODEL ? ["--model", MODEL] : []),
+      ...(EFFORT ? ["--effort", EFFORT] : []),
+      // Skip the user's own settings (their output style adds explanation text around every piece of code)
+      // and skills (the Skill tool only produced a failing call).
+      "--setting-sources", "project,local",
+      "--disable-slash-commands",
+      "--strict-mcp-config", "--mcp-config", MCP_CONFIG,
+      "--allowedTools", `mcp__${FIGMA_MCP}`, "Read", "Bash(curl -sS -X POST:*)",
     ],
     { cwd: ROOT, stdio: ["pipe", "pipe", "pipe"] }
   );
@@ -199,4 +218,4 @@ function runFigmaBuild(images, figmaUrl, job, onUpdate = () => {}) {
   child.stdin.end(buildPrompt(images, figmaUrl));
 }
 
-module.exports = { runFigmaBuild, FIGMA_MCP, SETUP_HINT };
+module.exports = { runFigmaBuild, FIGMA_MCP, FIGMA_MCP_URL, SETUP_HINT };

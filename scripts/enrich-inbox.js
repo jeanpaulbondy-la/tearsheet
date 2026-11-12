@@ -62,7 +62,16 @@ function runClaude(prompt) {
   return new Promise((resolve, reject) => {
     const child = spawn(
       findClaude(),
-      ["-p", "--output-format", "json", "--no-session-persistence", "--permission-mode", "dontAsk", "--allowedTools", "Read"],
+      [
+        "-p",
+        "--output-format", "json",
+        "--no-session-persistence",
+        "--permission-mode", "dontAsk",
+        "--setting-sources", "project,local",
+        // Describing images needs no connectors at all, so load none.
+        "--strict-mcp-config", "--mcp-config", JSON.stringify({ mcpServers: {} }),
+        "--allowedTools", "Read",
+      ],
       { cwd: ROOT, stdio: ["pipe", "pipe", "pipe"] }
     );
 

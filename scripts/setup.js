@@ -108,7 +108,7 @@ open "http://localhost:$PORT"
 }
 
 function connectFigma() {
-  const { FIGMA_MCP } = require("./figma-build");
+  const { FIGMA_MCP, FIGMA_MCP_URL } = require("./figma-build");
   const has = (cmd, cmdArgs) => spawnSync(cmd, cmdArgs, { stdio: "ignore" }).status === 0;
 
   if (!has("claude", ["--version"])) {
@@ -116,7 +116,7 @@ function connectFigma() {
     return;
   }
   if (!has("claude", ["mcp", "get", FIGMA_MCP])) {
-    execFileSync("claude", ["mcp", "add", "--transport", "http", "--scope", "user", FIGMA_MCP, "https://mcp.figma.com/mcp"], { stdio: "inherit" });
+    execFileSync("claude", ["mcp", "add", "--transport", "http", "--scope", "user", FIGMA_MCP, FIGMA_MCP_URL], { stdio: "inherit" });
   }
   console.log(`Figma is registered with Claude Code as "${FIGMA_MCP}".`);
   console.log("One-time sign-in: run `claude`, type /mcp, choose figma, and authenticate in the browser.");
