@@ -10,7 +10,7 @@ Everything stays local. Nothing is uploaded anywhere unless you explicitly push 
 
 <p align="center">
   <a href="assets/readme/tearsheet-demo.mp4">
-    <img src="assets/readme/tearsheet-demo.gif" alt="Tearsheet in 30 seconds: 91 references become a Figma design system in about 3 minutes" width="100%" />
+    <img src="assets/readme/tearsheet-demo.gif" alt="Tearsheet in about 30 seconds: 91 references become a Figma design system in about 3 minutes" width="100%" />
   </a>
   <br />
   <sub>From a pile of references to a Figma design system in about 3 minutes. <a href="assets/readme/tearsheet-demo.mp4">Watch the full video with sound</a>.</sub>
