@@ -10,10 +10,10 @@ Everything stays local. Nothing is uploaded anywhere unless you explicitly push 
 
 <p align="center">
   <a href="assets/readme/tearsheet-demo.mp4">
-    <img src="assets/readme/demo-poster.jpg" alt="Watch the 35-second demo: browse, search, open a reference, select, and build" width="100%" />
+    <img src="assets/readme/demo-poster.jpg" alt="Watch the 1-minute demo: browse, search, open a reference, select, and build" width="100%" />
   </a>
   <br />
-  <sub>Watch the 35-second demo: browse, search, open a reference, select, and build in Figma.</sub>
+  <sub>Watch the 1-minute demo: browse, search, open a reference, select, and build in Figma.</sub>
 </p>
 
 ## Requirements
