@@ -19,3 +19,7 @@ inbox/*
 !inbox/.gitkeep
 .tearsheet-figma-build.log
 data/figma-builds.json
+
+# Promo video: inputs hold your own references, out/ is rendered output
+assets/promo/input/
+assets/promo/out/

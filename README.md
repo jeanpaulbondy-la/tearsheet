@@ -135,7 +135,7 @@ See `skills/tearsheet-to-figma/SKILL.md` for build details.
 - `scripts/palette.js`, `scripts/video-thumbnail.js`: palette extraction and video frame capture used by `/process-inbox`
 - `.claude/skills/process-inbox/`: the `/process-inbox` command (project-scoped, auto-loaded)
 - `skills/use-tearsheet/`, `skills/tearsheet-to-figma/`, `skills/tearsheet-to-design/`: the global commands installed by `npm run setup`
-- `assets/`: app icon, social preview card, and README images
+- `assets/`: app icon, social preview card, README images, and the promo video source (`assets/promo/`)
 
 ## License
 

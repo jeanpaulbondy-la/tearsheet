@@ -1,0 +1,344 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+@font-face{font-family:"Bricolage Grotesque";src:url("../../public/fonts/bricolage-grotesque-wght.woff2");font-weight:200 800}
+@font-face{font-family:"DM Mono";src:url("../../public/fonts/dm-mono-500.woff2");font-weight:500}
+:root{--bg:#0f0e0c;--ink:#ece8e0;--blue:#5b74ff;--copper:#ae5026;--peach:#d57a59}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",sans-serif}
+.scene{position:absolute;inset:0;overflow:hidden;display:none}
+.abs{position:absolute}
+img{display:block}
+.mono{font-family:"DM Mono",monospace;font-weight:500}
+/* S1 mosaic */
+#mosaic .tile{position:absolute;width:192px;height:180px;overflow:hidden}
+#mosaic .tile img{width:100%;height:100%;object-fit:cover}
+.big{position:absolute;left:0;right:0;text-align:center;font-weight:800;letter-spacing:-.04em;line-height:.85}
+.plate{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(15,14,12,.88) 0%,rgba(15,14,12,.55) 60%,rgba(15,14,12,.2) 100%)}
+/* captions */
+.k{position:absolute;left:64px;bottom:72px;font-weight:800;font-size:92px;letter-spacing:-.03em;line-height:1;background:var(--ink);color:#0f0e0c;padding:6px 26px 14px;transform-origin:0 100%;white-space:nowrap}
+.k.blue{background:var(--blue);color:#fff}
+.k.peach{background:var(--peach);color:#1a0d07}
+/* ui stills */
+.still{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.ring{position:absolute;border:4px solid var(--blue);border-radius:6px;box-shadow:0 0 0 6px rgba(91,116,255,.25)}
+.cursor{position:absolute;width:44px;height:44px;transform-origin:4px 4px}
+.ripple{position:absolute;width:20px;height:20px;border-radius:50%;border:4px solid var(--blue)}
+/* build panel */
+#panel{background:#0f0e0c}
+#panel .row{position:absolute;left:640px;width:1240px;height:70px}
+#panel .lab{position:absolute;left:0;top:0;width:330px;height:70px;line-height:70px;font-size:30px;font-family:"DM Mono";font-weight:500;color:rgba(236,232,224,.8)}
+#panel .trk{position:absolute;left:340px;top:18px;width:820px;height:34px;background:rgba(255,250,240,.08);border-radius:3px;overflow:hidden}
+#panel .fill{height:100%;background:var(--blue);width:0}
+#panel .ok{position:absolute;left:1180px;top:0;height:70px;line-height:70px;font-size:34px;font-weight:800;color:var(--ink);opacity:0}
+#timer{position:absolute;left:64px;top:300px;font-family:"DM Mono";font-weight:500;font-size:190px;letter-spacing:-.04em;line-height:1}
+
+/* editor chrome */
+#s6{background:#2c2c2c;font-family:Inter,-apple-system,"SF Pro Text",system-ui,sans-serif;color:#e6e6e6;font-size:14px}
+#s6 .tb{position:absolute;left:0;top:0;width:1920px;height:48px;background:#2c2c2c;border-bottom:1px solid #444;display:flex;align-items:center;padding:0 16px;gap:18px}
+#s6 .tb .ttl{position:absolute;left:0;right:0;text-align:center;font-size:14px;color:#cfcfcf;pointer-events:none}
+#s6 .tb .ttl b{color:#fff;font-weight:500}
+#s6 .share{margin-left:auto;background:#0d99ff;color:#fff;border-radius:6px;padding:7px 16px;font-weight:500;position:relative}
+#s6 .zoom{color:#cfcfcf;position:relative;margin-right:6px}
+#s6 .av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#d57a59,#ae5026);position:relative;margin-left:auto;margin-right:-6px}
+#s6 #lp,#s6 #rp{position:absolute;top:48px;bottom:0;width:300px;background:#2c2c2c;overflow:hidden}
+#s6 #lp{left:0;border-right:1px solid #444}
+#s6 #rp{right:0;border-left:1px solid #444}
+#s6 .hd{padding:14px 16px 8px;font-size:13px;font-weight:600;color:#fff;display:flex;gap:18px}
+#s6 .hd span.dim{color:#9a9a9a;font-weight:500}
+#s6 .pg{padding:5px 16px 5px 28px;color:#cfcfcf}
+#s6 .pg.cur{background:rgba(13,153,255,.22);color:#fff}
+#s6 .sep{height:1px;background:#444;margin:8px 0}
+#s6 .lr{display:flex;align-items:center;gap:6px;height:27px;color:#d6d6d6;white-space:nowrap}
+#s6 .lr.sel{background:rgba(13,153,255,.28);color:#fff}
+#s6 .lr .car{width:12px;color:#8a8a8a;font-size:11px;text-align:center}
+#s6 .lr .ic{width:16px;color:#8f8f8f;text-align:center;font-size:13px}
+#s6 .lr .ic.cmp{color:#b88cff}
+#s6 .lr .nm{overflow:hidden;text-overflow:ellipsis}
+#s6 #canvas{position:absolute;left:301px;top:48px;width:1318px;height:1032px;background:#1e1e1e;overflow:hidden}
+#s6 #canvas img{position:absolute;left:0;top:0;transform-origin:0 0;display:none;max-width:none}
+#s6 #selbox{position:absolute;border:2px solid #0d99ff;display:none}
+#s6 #selbox i{position:absolute;width:9px;height:9px;background:#fff;border:1.5px solid #0d99ff}
+#s6 #sellab{position:absolute;background:#0d99ff;color:#fff;font-size:12px;font-weight:600;padding:3px 8px;border-radius:3px;display:none;white-space:nowrap}
+#s6 #selsz{position:absolute;background:#0d99ff;color:#fff;font-size:11.5px;padding:2px 7px;border-radius:3px;display:none;white-space:nowrap}
+#s6 #bar{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);background:#2c2c2c;border:1px solid #444;border-radius:10px;height:48px;display:flex;align-items:center;gap:6px;padding:0 10px;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+#s6 #bar svg{width:34px;height:34px;padding:7px;border-radius:6px;stroke:#d6d6d6;fill:none;stroke-width:1.6}
+#s6 #bar svg.on{background:#0d99ff;stroke:#fff}
+#s6 .rsec{padding:12px 16px;border-top:1px solid #444}
+#s6 .rsec h4{font-size:12.5px;font-weight:600;color:#fff;margin-bottom:10px}
+#s6 .kv{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;color:#cfcfcf;font-size:13px}
+#s6 .kv b{color:#fff;font-weight:500;text-align:right}
+#s6 .grid4{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#s6 .box{background:#383838;border-radius:4px;padding:7px 9px;color:#e6e6e6;font-size:13px}
+#s6 .box em{font-style:normal;color:#8f8f8f;margin-right:8px}
+#s6 .var{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:13px}
+#s6 .var .sw{width:20px;height:20px;border-radius:50%;border:1px solid rgba(255,255,255,.25);flex:none}
+#s6 .var .vn{color:#e6e6e6;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#s6 .var .hx{font-family:"DM Mono",monospace;color:#9fb4ff;font-size:12.5px}
+#s6 .ts{margin-bottom:12px}#s6 .ts .a{font-size:13px;color:#fff;margin-bottom:2px}#s6 .ts .b{font-size:12px;color:#9a9a9a}
+#s6 .chip{display:inline-block;background:#383838;border-radius:4px;padding:3px 8px;margin:0 6px 6px 0;font-size:12px;color:#d6d6d6}
+
+</style>
+
+<div id="s1" class="scene"><div id="mosaic"></div><div class="plate"></div>
+  <div class="big" id="s1a" style="top:180px;font-size:560px">91</div>
+  <div class="big" id="s1b" style="top:700px;font-size:96px;letter-spacing:-.02em">references saved.</div>
+  <div class="big" id="s1c" style="top:330px;font-size:300px">Now what?</div></div>
+
+<div id="s2" class="scene"><div class="big" id="word" style="top:340px;font-size:330px">Tearsheet</div>
+  <div class="big mono" id="sub" style="top:690px;font-size:38px;letter-spacing:.06em;font-weight:500;color:rgba(236,232,224,.7)">YOUR REFERENCES, ORGANIZED</div>
+  <img class="still" id="g1" src="input/ui-grid.png"><img class="still" id="g2" src="input/ui-grid2.png">
+  <div class="k blue" id="c2a">Drop images in. Done.</div><div class="k" id="c2b">Browse. Search. Filter.</div></div>
+
+<div id="s3" class="scene"><img class="still" id="det" src="input/ui-detail.png">
+  <div class="k" id="c3a">Claude reads every one.</div><div class="k blue" id="c3b">Real colors.</div><div class="k peach" id="c3c">Real hex.</div></div>
+
+<div id="s4" class="scene"><img class="still" id="sel" src="input/ui-select.png"><div class="ripple" id="rip"></div>
+  <svg class="cursor" id="cur" viewBox="0 0 44 44"><path d="M4 2 L4 34 L12 27 L18 40 L24 37 L18 25 L29 25 Z" fill="#fff" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/></svg>
+  <div class="k" id="c4a">Pick your references.</div><div class="k blue" id="c4b">Save for Figma.</div></div>
+
+<div id="panel" class="scene"><div id="timer">0:00</div>
+  <div class="mono abs" id="vs" style="left:70px;top:590px;font-size:44px;color:rgba(236,232,224,.6)">was <s style="text-decoration-thickness:5px">9:35</s></div>
+  <div class="abs" id="rows"></div><div class="k peach" id="c5a">7 Claude workers. One file.</div></div>
+
+<div id="s6" class="scene">
+  <div class="tb"><svg width="20" height="20" viewBox="0 0 20 20" stroke="#cfcfcf" stroke-width="1.8" fill="none"><path d="M3 5h14M3 10h14M3 15h14"/></svg><span style="color:#8f8f8f">Drafts</span><span style="color:#8f8f8f">/</span><span style="color:#fff">Copper Console Kit</span>
+    <div class="ttl"></div><div class="av"></div><div class="zoom" id="zoomlab">100%</div><div class="share">Share</div></div>
+  <div id="lp"></div>
+  <div id="canvas"><img id="f1" src="input/fig/foundations.png"><img id="f2" src="input/fig/references.png"><img id="f3" src="input/fig/components.png">
+    <div id="selbox"><i style="left:-6px;top:-6px"></i><i style="right:-6px;top:-6px"></i><i style="left:-6px;bottom:-6px"></i><i style="right:-6px;bottom:-6px"></i></div>
+    <div id="sellab"></div><div id="selsz"></div>
+    <div id="bar"><svg class="on" viewBox="0 0 20 20"><path d="M5 3l10 6-4.3 1.2L9 15z"/></svg><svg viewBox="0 0 20 20"><path d="M6 3v14M14 3v14M3 6h14M3 14h14"/></svg><svg viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12"/></svg><svg viewBox="0 0 20 20"><path d="M4 16l3-1 8-8-2-2-8 8zM12 5l3 3"/></svg><svg viewBox="0 0 20 20"><path d="M5 5h10M10 5v11"/></svg><svg viewBox="0 0 20 20"><path d="M4 5h12v8H9l-3 3v-3H4z"/></svg></div></div>
+  <div id="rp"></div>
+  <div class="k blue" id="c6a">Colors. With hex.</div><div class="k" id="c6b">Type styles.</div><div class="k peach" id="c6c">Your real references.</div>
+  <div class="k blue" id="c6d">14 components.</div><div class="k" id="c6e">Every state.</div></div>
+
+<div id="s7" class="scene">
+  <div class="big" id="e1" style="top:250px;font-size:230px">Your references.</div>
+  <div class="big" id="e2" style="top:210px;font-size:250px;color:var(--blue)">Become a<br>design system.</div>
+  <div class="big" id="e3" style="top:250px;font-size:200px">In about<br>3 minutes.</div>
+  <div class="big" id="e4" style="top:200px;font-size:300px">Tearsheet</div>
+  <div class="big mono" id="e6" style="top:545px;font-size:34px;letter-spacing:.14em;color:rgba(236,232,224,.7)">COLORS · TYPE STYLES · COMPONENTS, WITH HEX</div>
+  <div class="big mono" id="e5" style="top:625px;font-size:44px;letter-spacing:.02em;color:var(--blue)">github.com/jeanpaulbondy-la/tearsheet</div>
+  <div class="abs" id="chips" style="left:560px;top:760px;display:flex;gap:0"></div></div>
+<div class="flash" id="flash"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const outCubic = (x) => 1 - Math.pow(1 - x, 3);
+const inOut = (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const outBack = (x) => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+const rnd = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+const show = (el, on) => (el.style.display = on ? "block" : "none");
+
+// ---- build static DOM ----
+const mosaic = $("mosaic");
+const tiles = [];
+for (let r = 0; r < 6; r++) for (let c = 0; c < 10; c++) {
+  const i = r * 10 + c, d = document.createElement("div");
+  d.className = "tile"; d.style.left = c * 192 + "px"; d.style.top = r * 180 + "px";
+  d.innerHTML = `<img src="input/thumbs/t${String(i).padStart(2, "0")}.jpg">`;
+  mosaic.append(d); tiles.push({ d, at: 0.05 + rnd(i + 3) * 1.25 });
+}
+// real build timeline (seconds): setup, then seven parallel workers
+const WORK = [["setup", 0, 63], ["foundations", 63, 161], ["references", 63, 119], ["components 1", 63, 150], ["components 2", 63, 128], ["components 3", 63, 133], ["components 4", 63, 140], ["components 5", 63, 167]];
+const rows = $("rows"), rowEls = [];
+WORK.forEach(([name, a, b], i) => {
+  const d = document.createElement("div"); d.className = "row"; d.style.top = 120 + i * 88 + "px";
+  d.innerHTML = `<div class="lab">${name}</div><div class="trk"><div class="fill"></div></div><div class="ok">✓</div>`;
+  rows.append(d); rowEls.push({ d, fill: d.querySelector(".fill"), ok: d.querySelector(".ok"), a, b });
+});
+[["#191A1D"], ["#D57A59"], ["#E97111"], ["#20AED7"], ["#EC5B50"], ["#5B9494"]].forEach(([h]) => {
+  const d = document.createElement("div"); d.style.cssText = `width:130px;height:130px;background:${h};border:1px solid rgba(255,250,240,.2)`; $("chips").append(d);
+});
+
+const beatFlashes = [3.0, 6.0, 9.0, 12.0, 18.0, 25.5, 29.0];
+const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const slam = (el, t, a, hold = 0.35) => { // scale-in with overshoot, hard cut out
+  const p = outBack(prog(t, a, a + 0.28));
+  el.style.transform = `scale(${0.55 + 0.45 * p}) rotate(${(1 - p) * -3}deg)`; el.style.opacity = clamp(prog(t, a, a + 0.05));
+};
+
+// ===== Figma editor scene =====
+const FAMILIES = ["Button","Hero Section","Eyebrow Badge","Numeric Value Readout","Preset Selector","Logo Strip","Power Toggle Button","Plugin Header Bar","Top Navigation Bar","Rotary Knob","Payment Card","Vertical Fader","Band Panel","Level Meter"];
+const SETS = {
+  "Button":       { x: 80, y: 269, w: 827, h: 331, n: 16, props: [["Type","primary, secondary, ghost, destructive"],["State","default, hover, pressed, disabled"]], vars: [["color/accent/primary","Copper","#D57A59"],["color/status/danger","Coral","#EC5B50"],["color/text/on-accent","Ink","#191A1D"]], variants: ["Type=primary, State=default","Type=primary, State=hover","Type=primary, State=pressed","Type=primary, State=disabled","Type=secondary, State=default","Type=secondary, State=hover"] },
+  "Hero Section": { x: 80, y: 736, w: 1026, h: 2402, n: 4, props: [["Kind","centered, split-with-cards"],["State","default, grid-visible"]], vars: [["color/bg/primary","Ink","#191A1D"],["color/accent/primary","Copper","#D57A59"],["color/accent/secondary","Sky","#20AED7"]], variants: ["Kind=centered, State=default","Kind=centered, State=grid-visible","Kind=split-with-cards, State=default","Kind=split-with-cards, State=grid-visible"] },
+  "Band Panel":   { x: 80, y: 8146, w: 920, h: 434, n: 4, props: [["State","default, active, bypassed, solo"]], vars: [["color/bg/surface","Graphite","#29292E"],["color/accent/primary","Copper","#D57A59"],["color/text/primary","Cream","#F5F0EB"]], variants: ["State=default","State=active","State=bypassed","State=solo"] },
+};
+const PRIMS = [["primitive/ink","Ink","#191A1D"],["primitive/graphite","Graphite","#29292E"],["primitive/cream","Cream","#F5F0EB"],["primitive/copper","Copper","#D57A59"],["primitive/sky","Sky","#20AED7"],["primitive/coral","Coral","#EC5B50"],["primitive/tangerine","Tangerine","#E97111"],["primitive/sage","Sage","#5B9494"]];
+const REFS = ["Fintech landing page hero","Serif wordmark specimen","Retro space poster","Audio plugin interface","Painterly abstract composition"];
+const PAINT = ["#F62B04","#BF3115","#2C214D","#2D5270","#5B9494","#CB7A3E"];
+const lrow = (d, ic, nm, o = {}) => `<div class="lr${o.sel ? " sel" : ""}" style="padding-left:${14 + d * 18}px"><span class="car">${o.open === true ? "▾" : o.open === false ? "▸" : ""}</span><span class="ic ${o.cls || ""}">${ic}</span><span class="nm">${nm}</span></div>`;
+const pages = (cur) => `<div class="hd">File <span class="dim">Assets</span></div>` + ["Cover","Foundations","References","Components"].map((p) => `<div class="pg${p === cur ? " cur" : ""}">${p}</div>`).join("") + `<div class="sep"></div><div class="hd" style="padding-top:4px">Layers</div>`;
+const swatch = (h) => `<span class="sw" style="background:${h}"></span>`;
+const varRow = ([n, nm, h]) => `<div class="var">${swatch(h)}<span class="vn">${n}</span><span class="hx">${h}</span></div>`;
+const rhead = (tab) => `<div class="hd"><span>Design</span><span class="dim">Prototype</span><span class="dim" style="margin-left:auto">${tab || ""}</span></div>`;
+const kvs = (rows) => rows.map(([k, v]) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`).join("");
+
+function editorState(t) {
+  if (t < 19.2) return { key: "fa", page: "Foundations", img: "f1", cam: { s: 0.88, cx: 668, cy: 560 + 900 * inOut(prog(t, 18.0, 19.2)) } };
+  if (t < 20.4) return { key: "fb", page: "Foundations", img: "f1", cam: { s: 0.88, cx: 668, cy: 3345 } };
+  if (t < 21.9) { const e = inOut(prog(t, 20.4, 21.1)); const L = (a, b) => a + (b - a) * e; return { key: "rf", page: "References", img: "f2", cam: { s: Math.exp(L(Math.log(0.56), Math.log(0.95))), cx: L(1124, 1972), cy: L(462, 517) } }; }
+  const T = [{ t: 21.9, s: 0.105, cx: 712, cy: 4630, set: null }, { t: 22.4, s: 0.85, cx: 493, cy: 434, set: "Button" }, { t: 23.4, s: 0.38, cx: 593, cy: 1937, set: "Hero Section" }, { t: 24.4, s: 0.85, cx: 540, cy: 8363, set: "Band Panel" }];
+  let k = 0; for (let i = 0; i < T.length; i++) if (t >= T[i].t) k = i;
+  const cur = T[k], prev = T[Math.max(0, k - 1)];
+  const e = k === 0 ? 1 : inOut(prog(t, cur.t, cur.t + 0.4));
+  const lerp = (a, b) => a + (b - a) * e;
+  const s = Math.exp(lerp(Math.log(prev.s), Math.log(cur.s)));
+  return { key: "c" + (cur.set || "ov"), page: "Components", img: "f3", set: cur.set, settled: e > 0.98, cam: { s, cx: lerp(prev.cx, cur.cx), cy: lerp(prev.cy, cur.cy) } };
+}
+
+let lastKey = "";
+function renderEditor(t) {
+  const st = editorState(t);
+  if (st.key !== lastKey) {
+    lastKey = st.key;
+    let layers = "", right = "";
+    if (st.page === "Foundations") {
+      layers = lrow(0, "#", "Foundations", { open: true }) + lrow(1, "#", "Header", { open: false }) + lrow(1, "#", "Semantic color tokens", { open: false }) + lrow(1, "#", "Primitives &amp; opacity tints", { open: false }) + lrow(1, "#", "Typography", { open: false }) + lrow(1, "#", "States &amp; status", { open: false });
+      right = st.key === "fa"
+        ? rhead("100%") + `<div class="rsec"><h4>Local variables</h4>${PRIMS.map(varRow).join("")}</div><div class="rsec"><h4>Collection</h4><div class="kv"><span>Colors</span><b>8 primitives, 11 tokens</b></div></div>`
+        : rhead("100%") + `<div class="rsec"><h4>Text styles</h4><div class="ts"><div class="a">Heading/Serif (approx. Playfair Display)</div><div class="b">Playfair Display Regular</div></div><div class="ts"><div class="a">Body/Sans (approx. Inter)</div><div class="b">Inter Regular</div></div><div class="ts"><div class="a">Mono (approx. JetBrains Mono)</div><div class="b">JetBrains Mono Regular · 13</div></div></div><div class="rsec"><h4>Color styles</h4><div class="kv"><span>State recipes</span><b>6</b></div><div class="kv"><span>Status colors</span><b>4</b></div></div>`;
+    } else if (st.page === "References") {
+      layers = lrow(0, "#", "References", { open: true }) + lrow(1, "T", "Title") + lrow(1, "#", "Reference cards", { open: true }) + REFS.map((r, i) => lrow(2, "#", "Ref / " + r, { sel: i === 4 })).join("");
+      right = rhead("95%") + `<div class="rsec"><h4>Painterly abstract composition</h4><div class="grid4"><div class="box"><em>W</em>392</div><div class="box"><em>H</em>528</div></div></div><div class="rsec"><h4>Fill</h4><div class="kv"><span>Image</span><b>Fill · 100%</b></div></div><div class="rsec"><h4>Extracted palette</h4>${PAINT.map((h) => `<div class="var">${swatch(h)}<span class="vn">palette</span><span class="hx">${h}</span></div>`).join("")}</div>`;
+    } else {
+      const open = st.set;
+      layers = lrow(0, "#", "Components", { open: true });
+      for (const f of FAMILIES) {
+        if (f === open) {
+          layers += lrow(1, "#", f, { open: true }) + lrow(2, "T", "Label") + lrow(2, "❖", f, { open: true, cls: "cmp", sel: true });
+          SETS[f].variants.forEach((v) => (layers += lrow(3, "◆", v, { cls: "cmp" })));
+          if (SETS[f].n > SETS[f].variants.length) layers += lrow(3, "", `… ${SETS[f].n - SETS[f].variants.length} more`, {});
+        } else layers += lrow(1, "#", f, { open: false });
+      }
+      if (open) {
+        const S = SETS[open];
+        right = rhead("85%") + `<div class="rsec"><h4><span style="color:#b88cff">❖</span>&nbsp; ${open}</h4><div class="kv"><span>Component set</span><b>${S.n} variants</b></div></div><div class="rsec"><h4>Variant properties</h4>${kvs(S.props)}</div><div class="rsec"><h4>Layout</h4><div class="grid4"><div class="box"><em>X</em>${S.x}</div><div class="box"><em>Y</em>${S.y}</div><div class="box"><em>W</em>${S.w}</div><div class="box"><em>H</em>${S.h}</div></div></div><div class="rsec"><h4>Variables in use</h4>${S.vars.map(varRow).join("")}</div>`;
+      } else {
+        right = rhead("16%") + `<div class="rsec"><h4>Components</h4><div class="grid4"><div class="box"><em>W</em>1424</div><div class="box"><em>H</em>9260</div></div></div><div class="rsec"><h4>Contents</h4><div class="kv"><span>Component sets</span><b>14</b></div><div class="kv"><span>Variants</span><b>77</b></div></div>`;
+      }
+    }
+    $("lp").innerHTML = pages(st.page) + layers;
+    $("rp").innerHTML = right;
+  }
+  for (const id of ["f1", "f2", "f3"]) $(id).style.display = id === st.img ? "block" : "none";
+  const im = $(st.img), c = st.cam, W = 1318, H = 1032;
+  const tx = W / 2 - c.cx * c.s, ty = H / 2 - c.cy * c.s;
+  im.style.width = (st.img === "f1" ? 1336 : st.img === "f2" ? 2248 : 1424) + "px";
+  im.style.transform = `translate(${tx}px, ${ty}px) scale(${c.s})`;
+  $("zoomlab").textContent = Math.round(c.s * 100) + "%";
+  // selection overlay
+  let box = null, label = "";
+  if (st.page === "Components") {
+    if (st.set) { const S = SETS[st.set]; box = { x: S.x, y: S.y, w: S.w, h: S.h }; label = st.set; }
+    else { box = { x: 0, y: 0, w: 1424, h: 9260 }; label = "Components"; }
+  } else if (st.page === "References") { box = { x: 1776, y: 253, w: 392, h: 528 }; label = "Ref / Painterly abstract composition"; }
+  const sb = $("selbox"), sl = $("sellab"), sz = $("selsz");
+  for (const el of [sb, sl, sz]) el.style.display = box ? "block" : "none";
+  if (box) {
+    const L = tx + box.x * c.s, T = ty + box.y * c.s, w = box.w * c.s, h = box.h * c.s;
+    sb.style.left = L - 1 + "px"; sb.style.top = T - 1 + "px"; sb.style.width = w + 2 + "px"; sb.style.height = h + 2 + "px";
+    sl.textContent = label; sl.style.left = L - 1 + "px"; sl.style.top = T - 30 + "px";
+    sz.textContent = `${box.w} × ${box.h}`; sz.style.left = L + w / 2 - 36 + "px"; sz.style.top = T + h + 8 + "px";
+  }
+  // captions
+  for (const id of ["c6a", "c6b", "c6c", "c6d", "c6e"]) $(id).style.display = "none";
+  const cap = t < 19.2 ? "c6a" : t < 20.4 ? "c6b" : t < 21.9 ? "c6c" : t < 23.4 ? "c6d" : "c6e";
+  const capStart = t < 19.2 ? 18.0 : t < 20.4 ? 19.2 : t < 21.9 ? 20.4 : t < 23.4 ? 21.9 : 23.4;
+  $(cap).style.display = "block"; slam($(cap), t, capStart);
+}
+
+function render(t) {
+  for (const s of ["s1", "s2", "s3", "s4", "panel", "s6", "s7"]) show($(s), false);
+
+  if (t < 3.0) { // ------------- S1 hook
+    show($("s1"), true);
+    tiles.forEach(({ d, at }) => { const p = outBack(prog(t, at, at + 0.22)); d.style.transform = `scale(${p})`; d.style.opacity = clamp(prog(t, at, at + 0.06)); });
+    const first = t < 1.5;
+    $("s1a").style.display = $("s1b").style.display = first ? "block" : "none";
+    $("s1c").style.display = first ? "none" : "block";
+    if (first) { const n = Math.round(91 * outCubic(prog(t, 0.05, 1.0))); $("s1a").textContent = n; slam($("s1b"), t, 0.9); $("s1a").style.transform = `scale(${1 + 0.06 * (1 - prog(t, 1.0, 1.5))})`; }
+    else { slam($("s1c"), t, 1.5); }
+  } else if (t < 6.0) { // ------------- S2 reveal + browse
+    show($("s2"), true);
+    const w = $("word"), sub = $("sub");
+    const early = t < 4.0;
+    w.style.display = sub.style.display = early ? "block" : "none";
+    $("g1").style.display = (t >= 4.0 && t < 5.0) ? "block" : "none";
+    $("g2").style.display = t >= 5.0 ? "block" : "none";
+    $("c2a").style.display = (t >= 4.0 && t < 5.0) ? "block" : "none";
+    $("c2b").style.display = t >= 5.0 ? "block" : "none";
+    if (early) { const p = outBack(prog(t, 3.0, 3.4)); w.style.transform = `scale(${1.9 - 0.9 * p})`; w.style.opacity = clamp(prog(t, 3.0, 3.06)); sub.style.opacity = prog(t, 3.5, 3.8); }
+    if (t >= 4.0 && t < 5.0) { const p = prog(t, 4.0, 5.0); $("g1").style.transform = `scale(${1.0 + 0.07 * p})`; slam($("c2a"), t, 4.0); }
+    if (t >= 5.0) { const p = inOut(prog(t, 5.0, 6.0)); $("g2").style.transform = `translateY(${-160 * p}px) scale(1.06)`; slam($("c2b"), t, 5.0); }
+  } else if (t < 9.0) { // ------------- S3 Claude reads / palette zoom
+    show($("s3"), true);
+    const det = $("det");
+    const zz = clamp(outBack(prog(t, 6.9, 7.35)), 0, 1.06);
+    det.style.transformOrigin = "1610px 440px";
+    det.style.transform = t < 6.9 ? `scale(${1 + 0.03 * prog(t, 6, 6.9)})` : `translate(${-310 * zz}px, ${80 * zz}px) scale(${1 + 1.5 * zz})`;
+    $("c3a").style.display = t < 6.9 ? "block" : "none";
+    $("c3b").style.display = t >= 6.9 && t < 8.0 ? "block" : "none";
+    $("c3c").style.display = t >= 8.0 ? "block" : "none";
+    if (t < 6.9) slam($("c3a"), t, 6.0); else if (t < 8.0) slam($("c3b"), t, 6.9); else slam($("c3c"), t, 8.0);
+  } else if (t < 12.0) { // ------------- S4 select + save for Figma
+    show($("s4"), true);
+    const p = prog(t, 9.0, 12.0);
+    $("sel").style.transform = `scale(${1 + 0.04 * p})`; $("sel").style.transformOrigin = "960px 1000px";
+    const m = inOut(prog(t, 9.4, 10.5));
+    const cx = 1500 + (975 - 1500) * m, cy = 640 + (1048 - 640) * m;
+    const click = t >= 10.55;
+    $("cur").style.left = cx + "px"; $("cur").style.top = cy + "px";
+    $("cur").style.transform = `scale(${click && t < 10.7 ? 0.82 : 1})`;
+    const rp = prog(t, 10.55, 11.2);
+    $("rip").style.display = click && rp < 1 ? "block" : "none";
+    $("rip").style.left = 975 - 10 - 90 * rp + "px"; $("rip").style.top = 1048 - 10 - 90 * rp + "px";
+    $("rip").style.width = $("rip").style.height = 20 + 180 * rp + "px"; $("rip").style.opacity = 1 - rp;
+    $("c4a").style.display = t < 10.5 ? "block" : "none";
+    $("c4b").style.display = t >= 10.5 ? "block" : "none";
+    if (t < 10.5) slam($("c4a"), t, 9.0); else slam($("c4b"), t, 10.5);
+  } else if (t < 18.0) { // ------------- S5 the build, in real data
+    show($("panel"), true);
+    const real = 167 * clamp((t - 12.3) / 5.0); // 167 real seconds shown in 5 s
+    $("timer").textContent = fmt(real);
+    const done = real >= 167;
+    $("timer").style.color = done ? "#5b74ff" : "#ece8e0";
+    $("timer").style.transform = done ? `scale(${1 + 0.12 * Math.max(0, 1 - prog(t, 17.3, 17.7))})` : "none"; $("timer").style.transformOrigin = "0 50%";
+    $("vs").style.opacity = prog(t, 17.3, 17.6);
+    rowEls.forEach((r) => {
+      const p = clamp((real - r.a) / (r.b - r.a));
+      r.fill.style.width = p * 100 + "%";
+      r.ok.style.opacity = p >= 1 ? 1 : 0;
+      r.fill.style.background = p >= 1 ? "#ece8e0" : "#5b74ff";
+    });
+    slam($("c5a"), t, 12.15);
+  } else if (t < 25.5) { // ------------- S6 payoff, inside the Figma editor
+    show($("s6"), true);
+    renderEditor(t);
+  } else { // ------------- S7 end card
+    show($("s7"), true);
+    const parts = ["e1", "e2", "e3", "e4", "e5", "e6"]; parts.forEach((id) => ($(id).style.display = "none"));
+    $("chips").style.display = "none";
+    if (t < 26.5) { $("e1").style.display = "block"; slam($("e1"), t, 25.5); }
+    else if (t < 28.0) { $("e2").style.display = "block"; slam($("e2"), t, 26.5); }
+    else if (t < 29.0) { $("e3").style.display = "block"; slam($("e3"), t, 28.0); }
+    else {
+      $("e4").style.display = "block"; slam($("e4"), t, 29.0);
+      $("e6").style.display = "block"; $("e6").style.opacity = prog(t, 29.25, 29.5);
+      $("e5").style.display = "block"; $("e5").style.opacity = prog(t, 29.45, 29.7);
+      $("chips").style.display = "flex"; $("chips").style.opacity = prog(t, 29.45, 29.7);
+    }
+  }
+
+  let f = 0;
+  for (const b of beatFlashes) if (t >= b && t < b + 0.14) f = Math.max(f, 0.9 * (1 - (t - b) / 0.14));
+  $("flash").style.opacity = f;
+}
+window.render = render;
+window.ready = Promise.all([...document.images].map((i) => i.decode().catch(() => {})).concat(document.fonts.ready));
+</script>
