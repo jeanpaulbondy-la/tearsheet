@@ -604,6 +604,7 @@ function renderBuild(build) {
   li.append(element("p", "build-meta", `${when} · ${shown}`));
 
   if (build.status === "error" && build.error) li.append(element("p", "build-error-text", build.error));
+  if (build.status === "done" && build.warning) li.append(element("p", "build-error-text", build.warning));
 
   const actions = element("div", "build-actions");
   if (build.status === "done" && build.figmaUrl?.startsWith("https://www.figma.com/")) {

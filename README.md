@@ -112,7 +112,7 @@ Same selection step, then click "Build File" in Tearsheet. It creates a Figma fi
    ↓
 4. Select images → Click "Build File"
    ↓
-5. Figma file builds in the background (5 to 10 minutes; the button shows progress and the file opens when ready). Close the tab or reload if you like: the Builds button in the top bar lists every build with its status and an "Open in Figma" link, and can cancel one in progress
+5. Figma file builds in the background (about 3 minutes, with several Claude workers building parts of it at once; the button shows progress and the file opens when ready). Close the tab or reload if you like: the Builds button in the top bar lists every build with its status and an "Open in Figma" link, and can cancel one in progress
 ```
 
 **One-click Figma creation:** Selection → Click → Done. No permission prompts: the server runs Claude Code headless with only the Figma tools allowed, and opens the finished file for you.
@@ -128,7 +128,7 @@ See `skills/tearsheet-to-figma/SKILL.md` for build details.
 - `data/gallery.json`: metadata for every item, including its extracted palette (git-ignored)
 - `public/`: the gallery site (static HTML, CSS, JS; self-hosted type, no external requests)
 - `server.js`: serves the site, saves selections, and runs Figma builds as background jobs
-- `scripts/figma-build.js`: runs `claude -p` headless with the Figma MCP to build the file
+- `scripts/figma-build.js`, `scripts/figma-prompts.js`: run several `claude -p` workers in parallel with the Figma MCP (setup, then Foundations, References, and component batches at once)
 - `scripts/auto-process-inbox.js`, `scripts/enrich-inbox.js`: add inbox files instantly, then have Claude Code describe them in the background
 - `scripts/claude-cli.js`: finds and safely launches headless Claude Code for the scripts above
 - `scripts/setup.js`: installs the global commands and builds the macOS launcher
