@@ -21,7 +21,8 @@ const TIMEOUT_MS = 30 * 60 * 1000;
 // (e.g. "low") to trade breadth for speed. Unset means Claude Code's defaults.
 const MODEL = process.env.TEARSHEET_MODEL;
 const EFFORT = process.env.TEARSHEET_EFFORT;
-const FIGMA_URL = /https:\/\/www\.figma\.com\/(?:design|file)\/[A-Za-z0-9]+[^\s)>"'\\\]]*/g;
+const LIMIT_ERROR = /session limit|usage limit|rate limit|limit reached/i;
+const FIGMA_URL =/https:\/\/www\.figma\.com\/(?:design|file)\/[A-Za-z0-9]+[^\s)>"'\\\]]*/g;
 
 const STEP_LABELS = {
   whoami: "Connecting to Figma",
@@ -47,6 +48,7 @@ function buildPrompt(images, figmaUrl) {
     tags: img.tags,
     description: img.description,
     palette: img.palette,
+    components: img.components,
   }));
 
   return `This is a headless, non-interactive run started from the Tearsheet web app. Nobody can answer questions, so never ask any; make the reasonable choice and keep going.
@@ -58,6 +60,7 @@ Overrides to the workflow below:
       ? `\n- The user wants the kit built in this existing Figma file instead of a new one: ${figmaUrl}. Skip create_new_file and use its file key.`
       : ""
   }
+- Each image's "components" array is its precomputed UI-component inventory, most prominent first; an empty array means it is not a UI source (mood or palette only). Do NOT view images to build an inventory. Rank the patterns across all images by how often they recur and how prominent they are, and build from that. Only if an image has no "components" field, view it with the Read tool and infer them.
 - If the figma-use or figma-generate-library skills aren't available, call the Figma MCP's get_figma_skill tool (if it exists) to load its conventions.
 - Reference images must be the real files, not placeholders. upload_assets returns single-use upload URLs and does not read local files, so: (1) in your build script, create one rectangle per reference on the References page and return its node ID; (2) call upload_assets once with count = number of references and nodeIds = those IDs, in order; (3) for each returned upload URL, send the bytes with one Bash call per image, in parallel in a single message. Each call must be exactly this and nothing else, with the file's full absolute path from the selection written inline and its MIME type (image/png, image/jpeg, image/webp, or image/gif): curl -sS -X POST -H "Content-Type: <mime>" --data-binary @<absolute path> "<uploadUrl>". The command must start with the word curl. Do not use shell variables, cd, echo, newlines, ; or &&, and do not combine several uploads into one command, or the call is denied. Only run curl against upload URLs returned by upload_assets. If an upload fails, keep that rectangle as a captioned placeholder and continue.
 - You cannot download files. When you call get_screenshot, always pass enableBase64Response: true so the image comes back inline, and look at it.
@@ -144,6 +147,7 @@ function runFigmaBuild(images, figmaUrl, job, onUpdate = () => {}) {
 
   let finalText = "";
   let sawFigmaUrl = null;
+  let resultFailed = false;
   let stderr = "";
   let buffer = "";
   const timer = setTimeout(() => {
@@ -183,7 +187,10 @@ function runFigmaBuild(images, figmaUrl, job, onUpdate = () => {}) {
       onUpdate();
     }
 
-    if (event.type === "result") finalText = event.result || "";
+    if (event.type === "result") {
+      finalText = event.result || "";
+      resultFailed = event.is_error === true || LIMIT_ERROR.test(finalText);
+    }
   }
 
   child.stdout.on("data", (chunk) => {
@@ -206,7 +213,11 @@ function runFigmaBuild(images, figmaUrl, job, onUpdate = () => {}) {
 
     const urls = finalText.match(FIGMA_URL);
     const url = (urls && urls[urls.length - 1]) || sawFigmaUrl || figmaUrl;
-    if (url) {
+    if (resultFailed) {
+      // Claude stopped early (usage limit, API error). The file may exist but be incomplete, so say so.
+      const said = finalText.trim().slice(0, 300);
+      fail(`${AUTH_ERROR.test(said) ? LOGIN_HINT : said || "Claude stopped before finishing."}${url ? ` The file may be partly built: ${url}` : ""}`);
+    } else if (url) {
       finish("done", { figmaUrl: url });
     } else {
       const said = finalText.trim() || stderr.trim();

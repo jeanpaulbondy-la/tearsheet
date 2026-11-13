@@ -8,6 +8,14 @@ A personal, visual reference gallery that runs on your machine. Drop in images o
 
 Everything stays local. Nothing is uploaded anywhere unless you explicitly push it.
 
+## Requirements
+
+- **[Node.js](https://nodejs.org) 20 or newer** (check with `node -v`)
+- **[Git](https://git-scm.com)** to download and update Tearsheet
+- **[Claude Code](https://claude.com/claude-code)**, signed in. It writes the descriptions and runs the Figma build, and uses your existing login, so there is no API key to manage
+- **macOS** for the Dock app and launcher. The gallery itself also runs from `npm start` on Linux and Windows, but the setup script's launcher is macOS-only
+- **A Figma account** (only for "Build File")
+
 ## Install
 
 ```bash
@@ -31,6 +39,31 @@ npm start
 Then open **http://localhost:4560**. The gallery starts empty.
 
 **One-time Figma sign-in:** run `claude`, type `/mcp`, choose `figma`, and approve access in the browser. After that, "Save for Figma" needs nothing else, and no API key: it runs on your Claude Code login. Start Tearsheet from Tearsheet.app or Terminal, not from inside a Claude Code session.
+
+### Update
+
+```bash
+cd tearsheet
+git pull
+npm install && npm run setup
+```
+
+Your library is safe through an update. `images/`, `inbox/`, `data/gallery.json`, and your build history are git-ignored, so `git pull` never touches them. Re-running `npm run setup` is harmless: it refreshes the global commands and the launcher. If you edited a tracked file and `git pull` complains, run `git stash`, then `git pull`, then `git stash pop`.
+
+### Back up your library
+
+Your references live only on your machine. To back them up or move them to a new Mac, copy the `images/` folder and `data/gallery.json`, or put them in a private repo of their own. Don't commit them to a public fork.
+
+### Troubleshooting
+
+| Symptom | Fix |
+| --- | --- |
+| "Tearsheet was started inside Claude Code" | Start it from Tearsheet.app or a normal Terminal window, not from a Claude Code session |
+| New items stay named after their files | Claude Code needs you to sign in again. Run `claude`, type `/login`, then click **Check inbox** |
+| "Figma needs a one-time sign-in" | Run `npm run setup -- --figma`, then `claude`, type `/mcp`, choose `figma`, and approve access |
+| A build ends with a limit message | You hit your Claude usage limit. The Builds panel marks the run as an error and links the partly built file. Try again after the limit resets |
+| The page doesn't load | Another app may be using port 4560. Start with `PORT=4570 npm start` |
+| The server is stuck on an old version | Stop it with `lsof -i :4560 -sTCP:LISTEN -t \| xargs kill`, then start Tearsheet again |
 
 ## Use
 

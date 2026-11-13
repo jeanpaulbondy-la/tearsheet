@@ -76,7 +76,7 @@ Propose a semantic layer for the roles that map to a stable single hue: `color/b
 
 **4c. Components** — Build a real starter kit, not a generic sampler. **The kit must be recognizably built from what the sources show.** If the references are chat apps, the kit has chat components; if they are smart-home dashboards, it has device controls; a generic button/input/toggle set that ignores the subject is a failed build.
 
-1. **Inventory first.** For every UI-source image, view it with the Read tool and list the specific components it contains, by their real names: for example chat bubble (incoming, outgoing), message input bar, voice-message player, typing indicator, conversation list row, avatar with presence dot, profile header, settings row, device control card, metric or stat tile, chart tile, bottom nav bar, segmented control, search field, notification badge. Include domain patterns, not just the basics. Write the inventory out before building.
+1. **Use the precomputed inventory.** Each selected image carries a `components` array: the UI components it shows, by their real names, most prominent first (for example chat bubble, message input bar, conversation row, rotary knob, vertical fader, payment card). An empty array means the image is not a UI source (mood or palette only). **Do not view images to build an inventory.** Rank the patterns across all images by how often they recur and how central they are to the subject. Include domain patterns, not just the basics. Only if an image has no `components` field, view it with the Read tool and list its components yourself.
 2. **Domain components come first.** Rank the inventory by how often a pattern appears across the selected images and how central it is to the subject, and build those first. Reserve **at most half** of the families for generic essentials, and only to fill gaps the sources don't already cover (button, input, toggle, checkbox, badge, alert, card, tab).
 3. **Size.** Up to **14 families** in total. If the inventory is longer, build the highest-ranked and say in your final report which patterns were left out.
 
@@ -112,7 +112,7 @@ Load the `figma-use` skill (or the Figma MCP's `get_figma_skill` tool if the ski
 - **Set `clipsContent = false`** on every container frame on the Foundations, References, and Components pages.
 - **Stack sections with auto-layout** (a vertical frame with a gap), never by hand-computing y positions, so a section cannot land on top of the next one.
 - Set `layoutSizingHorizontal` and `layoutSizingVertical` (HUG or FIXED) **after** appending children. A frame made with `createAutoLayout()` starts with a white fill, so set `fills = []` unless it needs one.
-- **Overflow check.** After building each page, run this in a `use_figma` call and fix every entry it returns (resize the parent or re-lay-out the children) before moving on:
+- **Overflow check.** Put the code below at the end of each page-building call and return its result with the node IDs, so no separate call is needed. Fix every entry it lists (resize the parent or re-lay-out the children) in the next call:
 
 ```js
 const bad = [];
@@ -126,10 +126,17 @@ const bad = [];
 return bad;
 ```
 
-1. **Foundations call.** Create the pages (Cover, Foundations, References, Components) and bind every page background to `color/bg/primary`. Create the primitive variables, the semantic variables (aliased, with explicit scopes, never `ALL_SCOPES`), and the three text styles. Build the Foundations page: a semantic swatch row (each labeled with token path and natural name), per-primitive opacity rows, the type specimens, and the state and status color notes. Return any node IDs you need later.
+**Known Plugin API pitfalls.** Each of these has cost a failed call and a retry in real builds:
+- **Page backgrounds cannot be bound to variables.** Set `page.backgrounds` to a flat SOLID color (the resolved color of `color/bg/primary`). This failed in most builds.
+- `variable.setValueForMode(modeId, value)` needs the **string** `collection.modes[0].modeId`, not the mode object.
+- `layoutSizingHorizontal` and `layoutSizingVertical` can only be set on an auto-layout frame or a child of one. Append the node to its auto-layout parent first.
+- **Load every font** (`await figma.loadFontAsync`) before creating text or text styles, and create the text styles before any code that applies them.
+- Double-check the script for balanced brackets and a trailing `}` before sending it; a syntax error costs a whole call.
+
+1. **Foundations call.** Create the pages (Cover, Foundations, References, Components) and set every page background to a flat color equal to `color/bg/primary` (Figma rejects binding a page background to a variable). Create the primitive variables, the semantic variables (aliased, with explicit scopes, never `ALL_SCOPES`), and the three text styles. Build the Foundations page: a semantic swatch row (each labeled with token path and natural name), per-primitive opacity rows, the type specimens, and the state and status color notes. Return any node IDs you need later.
 2. **References call.** One rectangle plus caption per selected image, stating what it contributed (palette, typography, which component), and under each one its six extracted palette colors as small swatches with their hex values (see "Show the HEX value of every color"). Then upload the real images into those rectangles (the headless instructions above say how; interactively, use `upload_assets`).
 3. **Component calls.** One `use_figma` call per component family (two families per call only if both are tiny). In each: load every font first; build the base component with auto layout and token-bound fills, strokes, and text styles; create one variant per state or kind; `combineAsVariants`; name the set and its properties; place the set in a labeled grid on the Components page with a section label above it. Check each call's returned node IDs instead of taking a screenshot.
-4. **Final check.** Take one `get_screenshot` per page with `enableBase64Response: true` (a headless run cannot download the default link, so without that flag you never see the page). Look at each image. Fix anything visibly broken (clipped or empty swatches, overlapping layers, unreadable text, empty image fills) and re-run the overflow check. Never report the build as checked if you did not actually see the screenshots.
+4. **Final check.** Call `get_screenshot` for every page **in parallel, in a single message**, each with `enableBase64Response: true` (a headless run cannot download the default link, so without that flag you never see the page). Look at each image. Fix anything visibly broken (clipped or empty swatches, overlapping layers, unreadable text, empty image fills) in **at most one** follow-up call. Never report the build as checked if you did not actually see the screenshots.
 
 Text placed on a page or inside a component always uses one of the text styles, never the default font. Never surface a real brand or product name anywhere in the file.
 

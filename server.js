@@ -5,7 +5,7 @@ const os = require("os");
 const path = require("path");
 
 const { processInbox } = require("./scripts/auto-process-inbox");
-const { enrichPending, getStatus: getInboxStatus } = require("./scripts/enrich-inbox");
+const { enrichPending, ensureComponents, getStatus: getInboxStatus } = require("./scripts/enrich-inbox");
 const { runFigmaBuild } = require("./scripts/figma-build");
 
 const app = express();
@@ -60,6 +60,7 @@ app.post("/api/selection", (req, res) => {
       tags: item.tags,
       description: item.description,
       palette: item.palette,
+      components: item.components,
     })),
   };
 
@@ -108,23 +109,48 @@ app.post("/api/figma-build", (req, res) => {
   const job = {
     id: crypto.randomUUID(),
     status: "running",
-    step: "Starting",
+    step: "Listing components",
     startedAt: Date.now(),
     count: images.length,
     titles: images.map((img) => img.title),
   };
   builds.unshift(job);
   saveBuilds();
-  runFigmaBuild(images, req.body.figmaUrl || null, job, saveBuilds);
+  prepareAndRun(images, req.body.figmaUrl || null, job);
   res.status(202).json({ jobId: job.id });
 });
+
+// Fills in any missing UI-component inventories first (a cached, one-time step per image), so the
+// build itself doesn't spend minutes looking at images and working out what to build.
+async function prepareAndRun(images, figmaUrl, job) {
+  await ensureComponents(images.map((img) => img.id));
+  if (job.status !== "running") return;
+
+  let latest = new Map();
+  try {
+    latest = new Map(JSON.parse(fs.readFileSync(GALLERY_JSON, "utf8")).map((e) => [e.id, e]));
+  } catch {}
+  const withInventory = images.map((img) => ({ ...img, components: latest.get(img.id)?.components }));
+
+  job.step = "Starting";
+  saveBuilds();
+  runFigmaBuild(withInventory, figmaUrl, job, saveBuilds);
+}
 
 app.get("/api/figma-builds", (req, res) => res.json(builds));
 
 app.post("/api/figma-build/:id/cancel", (req, res) => {
   const job = builds.find((b) => b.id === req.params.id);
   if (!job) return res.status(404).json({ error: "Unknown build" });
-  if (job.status === "running" && job.cancel) job.cancel();
+  if (job.status === "running") {
+    if (job.cancel) {
+      job.cancel();
+    } else {
+      // Still preparing, so there is no Claude process to stop yet.
+      Object.assign(job, { status: "cancelled", finishedAt: Date.now() });
+      saveBuilds();
+    }
+  }
   res.json({ ok: true });
 });
 

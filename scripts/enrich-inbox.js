@@ -15,6 +15,8 @@ const GALLERY_FILE = path.join(ROOT, "data", "gallery.json");
 const BATCH_SIZE = 8;
 const TIMEOUT_MS = 10 * 60 * 1000;
 
+const isText = (v) => typeof v === "string" && v.trim().length > 0;
+
 const state = { running: false, error: null };
 
 const readGallery = () => JSON.parse(fs.readFileSync(GALLERY_FILE, "utf8"));
@@ -34,6 +36,10 @@ function slugify(text) {
     .replace(/-$/, "");
 }
 
+const COMPONENT_RULE = `- components: for a UI screenshot or an interface shown in a product shot, the distinct UI components visible, as 3 to 12 short lowercase names, most prominent and distinctive first (for example "rotary knob", "vertical fader", "chat bubble", "payment card", "settings row"). Name the specific patterns, not just generic ones like "button". For non-UI imagery (illustration, painting, photo, type specimen, texture, poster art with no interface) use [].`;
+
+const cleanComponents = (list) => [...new Set(list.filter(isText).map((c) => c.trim().toLowerCase()))].slice(0, 12);
+
 function buildPrompt(batch, categories) {
   const items = batch.map((e) => ({
     id: e.id,
@@ -45,7 +51,7 @@ function buildPrompt(batch, categories) {
 
 View each image below with the Read tool, then describe it. Reply with ONLY a JSON array, one object per item, in this exact shape and nothing else:
 
-[{"id":"<id from the list>","title":"...","subtitle":"...","category":"...","tags":["...","..."],"description":"..."}]
+[{"id":"<id from the list>","title":"...","subtitle":"...","category":"...","tags":["...","..."],"description":"...","components":["...","..."]}]
 
 Field rules:
 - title: 2 to 4 words. Use the product or site name if one is visible, otherwise a plain descriptive name.
@@ -53,6 +59,7 @@ Field rules:
 - category: reuse one of these existing categories if the item fits; otherwise coin a short new one in Title Case: ${JSON.stringify(categories)}
 - tags: 3 to 6 short lowercase phrases for distinct visual elements (layout, texture, color, typography, imagery), e.g. "halftone CMYK dot texture", "mono coordinate labels".
 - description: one or two sentences on what it shows and why it is useful as a reference. For a video, mention that it is a motion reference.
+${COMPONENT_RULE}
 
 Items:
 ${JSON.stringify(items, null, 2)}`;
@@ -115,8 +122,6 @@ function parseResults(text) {
   return parsed;
 }
 
-const isText = (v) => typeof v === "string" && v.trim().length > 0;
-
 // Writes Claude's answers into the gallery, re-reading it first so nothing added meanwhile is lost.
 function applyResults(results) {
   const gallery = readGallery();
@@ -132,6 +137,7 @@ function applyResults(results) {
     entry.category = isText(r.category) ? categories.get(r.category.trim().toLowerCase()) || r.category.trim() : entry.category;
     entry.tags = Array.isArray(r.tags) ? r.tags.filter(isText).map((t) => t.trim().toLowerCase()).slice(0, 6) : [];
     entry.description = r.description.trim();
+    if (Array.isArray(r.components)) entry.components = cleanComponents(r.components);
     delete entry.needsReview;
 
     renameToMatchTitle(entry, gallery);
@@ -209,4 +215,50 @@ async function enrichPending() {
   }
 }
 
-module.exports = { enrichPending, getStatus };
+function buildComponentsPrompt(batch) {
+  const items = batch.map((e) => ({
+    id: e.id,
+    path: path.join(IMAGES_DIR, e.thumbnail || e.filename),
+  }));
+
+  return `You are cataloging design references. This is a headless run: never ask questions.
+
+View each image below with the Read tool and list the UI components it contains. Reply with ONLY a JSON array, one object per item, in this exact shape and nothing else:
+
+[{"id":"<id from the list>","components":["...","..."]}]
+
+${COMPONENT_RULE}
+
+Items:
+${JSON.stringify(items, null, 2)}`;
+}
+
+// Gives each listed gallery item a UI-component inventory if it has none (items added before
+// inventories existed). Used right before a Figma build so the build doesn't derive it itself.
+// Never throws: on any failure the build simply falls back to viewing the images.
+async function ensureComponents(ids) {
+  if (blockedReason()) return;
+
+  const missing = readGallery().filter((e) => ids.includes(e.id) && !e.needsReview && !Array.isArray(e.components));
+
+  for (let i = 0; i < missing.length; i += BATCH_SIZE) {
+    try {
+      const results = parseResults(await runClaude(buildComponentsPrompt(missing.slice(i, i + BATCH_SIZE))));
+      const gallery = readGallery();
+      let changed = false;
+      for (const r of results) {
+        const entry = gallery.find((e) => e.id === r?.id);
+        if (entry && Array.isArray(r.components)) {
+          entry.components = cleanComponents(r.components);
+          changed = true;
+        }
+      }
+      if (changed) writeGallery(gallery);
+    } catch (err) {
+      console.error(`[inbox] Couldn't list components: ${err.message}`);
+      return;
+    }
+  }
+}
+
+module.exports = { enrichPending, ensureComponents, getStatus };
