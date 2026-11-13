@@ -9,9 +9,11 @@ A personal, visual reference gallery that runs on your machine. Drop in images o
 Everything stays local. Nothing is uploaded anywhere unless you explicitly push it.
 
 <p align="center">
-  <video src="https://github.com/jeanpaulbondy-la/tearsheet/raw/main/assets/readme/tearsheet-demo.mp4" poster="https://github.com/jeanpaulbondy-la/tearsheet/raw/main/assets/readme/demo-poster.jpg" controls muted loop playsinline width="100%"></video>
+  <a href="assets/readme/tearsheet-demo.mp4">
+    <img src="assets/readme/tearsheet-demo.gif" alt="Tearsheet in 30 seconds: 91 references become a Figma design system in about 3 minutes" width="100%" />
+  </a>
   <br />
-  <sub>From a pile of references to a Figma design system in about 3 minutes. <a href="assets/readme/tearsheet-demo.mp4">Open the video</a> if it doesn't play above.</sub>
+  <sub>From a pile of references to a Figma design system in about 3 minutes. <a href="assets/readme/tearsheet-demo.mp4">Watch the full video with sound</a>.</sub>
 </p>
 
 ## Requirements
